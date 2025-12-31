@@ -1,0 +1,8 @@
+[build]
+command = "npm run build"
+publish = "dist/tomix"
+
+[[headers]]
+for = "/assets/env.js"
+[headers.values]
+Content-Type = "application/javascript"
