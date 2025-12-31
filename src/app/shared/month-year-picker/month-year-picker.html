@@ -1,0 +1,68 @@
+<!-- Horizontal Scrollable Month Selector -->
+<div class="month-picker-wrapper">
+  <!-- Picker Icon Button -->
+  <button class="picker-toggle-btn" (click)="openPickerModal()" title="Open month/year picker">
+    <i class="bx bxs-calendar-alt" style="color: #08B783; font-size: 20px;"></i>
+  </button>
+
+  <!-- Scroll Container -->
+  <div class="month-scroll-container" #container>
+    <!-- Left fade effect -->
+    <div class="fade-left"></div>
+    
+    <!-- Scrollable months -->
+    <div class="month-scroll" #monthScroll>
+      @for (item of monthList(); track item.label) {
+        <button
+          (click)="selectMonth(item.month, item.year)"
+          [class.active]="
+            monthStore.month() === item.label
+          "
+          class="month-btn"
+        >
+          <span class="month-name">{{ item.month }}</span>
+          <span class="month-year">{{ item.year }}</span>
+        </button>
+      }
+    </div>
+    
+    <!-- Right fade effect -->
+    <div class="fade-right"></div>
+  </div>
+</div>
+
+<!-- Picker Modal -->
+@if (showPickerModal()) {
+  <div class="modal-overlay" (click)="closePickerModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <!-- Header -->
+      <div class="modal-header">
+        <button class="year-nav-btn" (click)="prevYear()">‹</button>
+        <span class="modal-year">{{ pickerViewYear() }}</span>
+        <button class="year-nav-btn" (click)="nextYear()">›</button>
+      </div>
+
+      <!-- Months Grid -->
+      <div class="months-grid">
+        @for (month of months; track $index) {
+          <button
+            (click)="selectMonthFromPicker($index)"
+            [class.active]="
+              pickerViewYear() === selectedYear() &&
+              $index === selectedMonth()
+            "
+            class="month-grid-btn"
+          >
+            {{ month }}
+          </button>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <button class="cancel-btn" (click)="closePickerModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+}
+

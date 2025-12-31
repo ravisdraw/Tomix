@@ -1,0 +1,575 @@
+<div class="w-full h-full flex flex-col 2xl:px-8 px-5">
+  <!--Header-->
+  <div class="w-full 2xl:h-[15%] flex place-items-center justify-between">
+    <div class="font-medium 2xl:text-[25px] text-[22px]">Budget</div>
+    <div class="flex gap-3 justify-center place-items-center">
+      <app-month-year-picker class="z-50 2xl:text-[18px] text-[14px]"></app-month-year-picker>
+      <div class="p-3 justify-center place-items-center">
+        <i
+          class="bx bx-plus rounded-[10px] bg-[#08B783] p-3 2xl:text-[20px] text-[16px] font-bold"
+          style="color: #ffffff"
+          (click)="openAddExpense()"
+        ></i>
+      </div>
+    </div>
+  </div>
+
+  <!--Income-->
+  <div class="w-full h-[85%] flex pb-5 2xl:gap-5 gap-2">
+    <div class="w-[50%] h-full flex flex-col 2xl:gap-5 gap-2">
+      <div class="w-full rounded-[10px] bg-[#F7FCFC] h-[33.33%] flex flex-col">
+        <div
+          class="w-full h-[35%] flex place-items-center justify-between p-5 border-b border-b-gray-200"
+        >
+          <div class="flex flex-col gap-1">
+            <div class="font-medium 2xl:text-[20px] text-[16px]">Income</div>
+            <div class="text-[10px] text-gray-500 font-medium">Main Source & Side Hustle</div>
+          </div>
+          <div class="flex flex-col gap-1">
+            <div
+              class="font-semibold 2xl:text-[22px] text-[18px]"
+              [ngClass]="totalIncome() > 0 ? 'text-[#08B783]' : 'text-[#FC3134]'"
+            >
+              Rs. {{ formatIndianRupee(totalIncome()) }}
+            </div>
+            <div class="text-[10px] text-gray-500 font-medium">Total Balance</div>
+          </div>
+        </div>
+        <div class="w-full h-[65%] flex flex-col border-t border-t-gray-200 overflow-y-auto">
+          @if (isCheckingData()) {
+          <ng-container *ngTemplateOutlet="skeletonLoader"></ng-container>
+          } @else if (incomeItems().length === 0) {
+          <div class="w-full flex place-items-center h-full justify-center text-gray-400">
+            No income added yet
+          </div>
+          } @else { @for (item of incomeItems(); track item.id) {
+          <div
+            class="w-full relative px-5 2xl:py-3 py-1  cursor-pointer"
+            (click)="toggleItemSelection(item.id)"
+          >
+            <div
+              class="w-full flex place-items-start justify-between"
+              [class.opacity-40]="selectedItemId() === item.id"
+            >
+              <div class="flex gap-5 place-items-center flex-1">
+                <div class="p-2 2xl:text-[20px] text-[18px] bg-gray-200 rounded-full">{{ item.emoji || '💰' }}</div>
+                <div class="flex flex-col gap-1">
+                  <div class="font-medium 2xl:text-[18px] text-[14px]">{{ item.expenseName }}</div>
+                  <div class="text-[10px] text-gray-500 font-medium">{{ item.category }}</div>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1 items-end">
+                <div class="font-semibold 2xl:text-[18px] text-[14px] text-[#08B783]">
+                  Rs. {{ formatIndianRupee(item.amount) }}
+                </div>
+                <div class="text-[10px] text-gray-500 font-medium">{{ item.bankAccount }}</div>
+              </div>
+            </div>
+            @if (selectedItemId() === item.id) {
+            <div class="absolute inset-0 flex items-center justify-center gap-4">
+              <i
+                class="bx bx-edit-alt bx-lg"
+                style="color: #0f1f3c; font-size: 28px; cursor: pointer"
+                (click)="editItem(item); $event.stopPropagation()"
+              ></i>
+              <i
+                class="bx bx-trash-alt bx-lg"
+                style="color: #0f1f3c; font-size: 28px; cursor: pointer"
+                (click)="deleteItem(item.id); $event.stopPropagation()"
+              ></i>
+            </div>
+            }
+          </div>
+          } }
+        </div>
+      </div>
+
+      <!--Last 5 Months Report-->
+      <div class="w-full rounded-[10px] bg-[#F7FCFC] h-[33.33%]">
+        <div class="w-full h-full flex flex-col 2xl:p-5 p-2">
+          <div class="font-medium 2xl:text-[20px] text-[14px] 2xl:mb-4">Last 5 Months Report</div>
+          <div class="flex-1 flex items-center justify-center">
+            @if (chartLabels().length > 0) {
+            <app-bar-chart class="2xl:w-full 2xl:h-full w-[95%] h-[99%]" [chartData]="chartData()"></app-bar-chart>
+            } @else {
+            <ng-container *ngTemplateOutlet="skeletonLoader"></ng-container>
+            }
+          </div>
+        </div>
+      </div>
+
+      <!--Expense Report-->
+      <div class="w-full h-[33.33%] flex gap-5">
+        <div class="w-[50%] h-full rounded-[10px] bg-[#F7FCFC] 2xl:p-5 p-2">
+          <div class="font-medium 2xl:text-[20px] text-[14px] 2xl:mb-4 mb-2">Expense by Category</div>
+          <div class="flex-1 flex items-center justify-center h-[calc(100%-40px)]">
+            @if (doughnutChartData().labels.length > 0) {
+            <app-doughnut-chart
+              class="w-full h-full"
+              [chartData]="doughnutChartData()"
+            ></app-doughnut-chart>
+            } @else if(isCheckingData()) {
+            <ng-container *ngTemplateOutlet="skeletonLoader"></ng-container>
+            } @else {
+            <div class="w-full flex place-items-center h-full justify-center text-gray-400">
+              No expense added yet
+            </div>
+            }
+          </div>
+        </div>
+        <div class="w-[50%] h-full rounded-[10px] bg-[#F7FCFC] 2xl:p-5 p-2">
+          <div class="w-full h-full flex flex-col">
+            <div class="flex justify-between place-items-center 2xl:mb-4 mb-2">
+              <div class="font-medium 2xl:text-[18px] text-[14px]">Bank Balance</div>
+              <button 
+                (click)="openAddBankAccount()"
+                class="p-2 2xl:text-[12px] text-[10px] bg-[#08B783] text-white rounded-lg hover:bg-[#06a071] transition-colors"
+              >
+                <i class="bx bx-plus"></i> Add
+              </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto">
+              @if (isLoadingBankAccounts()) {
+              <div class="flex items-center justify-center h-full text-gray-400">
+                <ng-container *ngTemplateOutlet="skeletonLoader"></ng-container>
+              </div>
+              } @else if (bankAccounts().length === 0) {
+              <div class="w-full flex items-center justify-center text-gray-400 h-full">
+                No bank accounts added yet
+              </div>
+              } @else {
+                @for (account of bankAccounts(); track account.id) {
+                <div
+                  class="w-full relative 2xl:px-5 2xl:py-3 px-3 py-2 cursor-pointer border-b border-b-gray-200"
+                  (click)="toggleBankAccountSelection(account.id)"
+                >
+                  <div
+                    class="w-full flex place-items-start justify-between"
+                    [class.opacity-40]="selectedBankAccountId() === account.id"
+                  >
+                    <div class="flex flex-col gap-1">
+                      <div class="font-medium 2xl:text-[16px] text-[13px]">{{ account.bank_name }}</div>
+                      <div class="text-[10px] text-gray-500 font-medium">Account Balance</div>
+                    </div>
+                    <div class="flex flex-col gap-1 items-end">
+                      <div class="font-semibold 2xl:text-[16px] text-[13px] text-[#08B783]">
+                        Rs. {{ formatIndianRupee(account.balance) }}
+                      </div>
+                    </div>
+                  </div>
+                  @if (selectedBankAccountId() === account.id) {
+                  <div class="absolute inset-0 flex items-center justify-center gap-4">
+                    <i
+                      class="bx bx-edit-alt bx-lg"
+                      style="color: #0f1f3c; font-size: 24px; cursor: pointer"
+                      (click)="editBankAccount(account); $event.stopPropagation()"
+                    ></i>
+                    <i
+                      class="bx bx-trash-alt bx-lg"
+                      style="color: #0f1f3c; font-size: 24px; cursor: pointer"
+                      (click)="deleteBankAccount(account.id); $event.stopPropagation()"
+                    ></i>
+                  </div>
+                  }
+                </div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!--Expenses-->
+    <div class="w-[50%] rounded-[10px] bg-[#F7FCFC] h-full">
+      <div
+        class="w-full h-[11%] flex place-items-center justify-between p-5 border-b-2 border-b-gray-200"
+      >
+        <div class="flex flex-col gap-1">
+          <div class="font-medium 2xl:text-[20px] text-[16px]">Expenses</div>
+          <div class="text-[10px] text-gray-500 font-medium">Both Spendings & Investments</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <div class="font-semibold 2xl:text-[22px] text-[18px] text-[#FC3134]">
+            Rs. {{ formatIndianRupee(totalExpense()) }}
+          </div>
+          <div class="text-[10px] text-gray-500 font-medium">Total Expenses</div>
+        </div>
+      </div>
+      <div class="w-full h-[89%] overflow-y-auto pt-2">
+        @if (isCheckingData()) {
+        <!-- Skeleton Loader -->
+        <ng-container *ngTemplateOutlet="skeletonLoader"></ng-container>
+        } @else if (expenseItems().length === 0) {
+        <div class="w-full flex items-center justify-center text-gray-400 h-full">
+          No expenses added yet
+        </div>
+        } @else { @for (item of expenseItems(); track item.id) {
+        <div
+          class="w-full relative px-5 2xl:py-3 py-1 cursor-pointer"
+          (click)="toggleItemSelection(item.id)"
+        >
+          <div
+            class="w-full flex place-items-start justify-between"
+            [class.opacity-40]="selectedItemId() === item.id"
+          >
+            <div class="flex gap-5 place-items-center flex-1">
+              <div class="p-2 2xl:text-[20px] text-[18px] rounded-full"
+                [class]="item.category === 'Investment' ? 'bg-yellow-200' : 'bg-gray-200'"
+              >
+                {{ item.emoji || '💳' }}
+              </div>
+              <div class="flex flex-col gap-1">
+                <div  class="font-medium 2xl:text-[18px] text-[14px]">{{ item.expenseName }}</div>
+                <div class="text-[10px] text-gray-500 font-medium">{{ item.category }}</div>
+              </div>
+            </div>
+            <div class="flex flex-col gap-1 items-end">
+              <div
+                class="font-semibold 2xl:text-[18px] text-[14px]"
+                [class]="item.category === 'Investment' ? 'text-yellow-500' : 'text-[#FC3134]'"
+              >
+                Rs. -{{ formatIndianRupee(item.amount) }}
+              </div>
+              <div class="text-[10px] text-gray-500 font-medium">{{ item.bankAccount }}</div>
+            </div>
+          </div>
+          @if (selectedItemId() === item.id) {
+          <div class="absolute inset-0 flex items-center justify-center gap-4">
+            <i
+              class="bx bx-edit-alt bx-lg"
+              style="color: #0f1f3c; font-size: 28px; cursor: pointer"
+              (click)="editItem(item); $event.stopPropagation()"
+            ></i>
+            <i
+              class="bx bx-trash-alt bx-lg"
+              style="color: #0f1f3c; font-size: 28px; cursor: pointer"
+              (click)="deleteItem(item.id); $event.stopPropagation()"
+            ></i>
+          </div>
+          }
+        </div>
+        } }
+      </div>
+    </div>
+  </div>
+  <div
+    class="fixed top-0 right-0 z-50 h-full  2xl:max-w-md w-sm bg-white transform transition-transform duration-300 ease-in-out flex flex-col translate-x-full"
+    [class.translate-x-0]="showAddExpense()"
+    [class.translate-x-full]="!showAddExpense()"
+  >
+    <!-- Form Header -->
+    <div class="flex items-center justify-between p-4 border-b">
+      <h2 class="2xl:text-lg font-semibold">
+        {{
+          editingItemId()
+            ? expenseForm.get('type')?.value === 'income'
+              ? 'Edit Income'
+              : 'Edit Expense'
+            : expenseForm.get('type')?.value === 'income'
+            ? 'Add Income'
+            : 'Add Expense'
+        }}
+      </h2>
+      <button class="text-2xl text-gray-500" (click)="closeAddExpense()">✕</button>
+    </div>
+
+    <!-- Form -->
+    <form
+      [formGroup]="expenseForm"
+      (ngSubmit)="submitExpense()"
+      class="flex flex-col 2xl:gap-4 gap-2 p-4 overflow-y-auto flex-1 2xl:text-[15px] text-[12px]"
+    >
+      <!-- Expense + Emoji -->
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="text-sm font-medium"
+            >{{ expenseForm.get('type')?.value === 'income' ? 'Income' : 'Expense' }}
+            <span class="text-red-500">*</span></label
+          >
+          <input
+            formControlName="expenseName"
+            class="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+            placeholder="Enter {{
+              expenseForm.get('type')?.value === 'income' ? 'income' : 'expense'
+            }} name"
+          />
+          @if (expenseForm.get('expenseName')?.invalid && expenseForm.get('expenseName')?.touched) {
+          <p class="text-red-500 text-xs mt-1">
+            {{ expenseForm.get('type')?.value === 'income' ? 'Income' : 'Expense' }} name is
+            required
+          </p>
+          }
+        </div>
+
+        <div class="w-20">
+          <label class="text-sm font-medium">Emoji</label>
+          <app-emoji-picker (emojiSelected)="onEmojiSelected($event)"></app-emoji-picker>
+        </div>
+      </div>
+
+      <!-- Amount -->
+      <div>
+        <label class="text-sm font-medium">Amount <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input
+            type="text"
+            #amountInput
+            formControlName="amount"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none"
+            placeholder="0"
+            (input)="onAmountChange($event)"
+          />
+        </div>
+        @if (expenseForm.get('amount')?.invalid && expenseForm.get('amount')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Amount is required and must be greater than 0</p>
+        }
+      </div>
+
+      <!-- Type -->
+      <div>
+        <label class="text-sm font-medium">Type <span class="text-red-500">*</span></label>
+        <select
+          formControlName="type"
+          class="mt-1 w-full rounded-lg border px-5 py-2 outline-none text-gray-900"
+        >
+          <option value="">Select</option>
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+        @if (expenseForm.get('type')?.invalid && expenseForm.get('type')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Type is required</p>
+        }
+      </div>
+
+      <!-- Category -->
+      <div>
+        <label class="text-sm font-medium">Category <span class="text-red-500">*</span></label>
+        <input
+          type="text"
+          formControlName="category"
+          placeholder="Type new category or select from below"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+        />
+
+        <!-- Existing categories as chips -->
+        <div class="flex flex-wrap 2xl:gap-1 gap-1 mt-3">
+          @for (cat of expenseCategories(); track cat.id) {
+          <button
+            type="button"
+            (click)="selectCategory(cat); $event.preventDefault()"
+            [class]="
+              selectedCategory() === cat.category_name
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            "
+            class="2xl:px-4 2xl:py-2 px-2 py-1 rounded-full 2xl:text-sm font-medium transition-colors flex items-center gap-2 relative group"
+          >
+            <span class="text-base">{{ cat.emoji }}</span>
+            <span>{{ cat.category_name }}</span>
+            <button
+              type="button"
+              (click)="deleteCategory(cat.id); $event.stopPropagation()"
+              class="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-sm font-bold hover:text-red-600"
+              title="Delete category"
+            >
+              ✕
+            </button>
+          </button>
+          }
+        </div>
+
+        @if (expenseForm.get('category')?.invalid && expenseForm.get('category')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Category is required</p>
+        }
+      </div>
+
+      <!-- Bank -->
+      <div>
+        <label class="text-sm font-medium">Bank Account <span class="text-red-500">*</span></label>
+        <select
+          formControlName="bankAccount"
+          class="mt-1 w-full rounded-lg border px-5 py-2 outline-none text-gray-900"
+        >
+          <option value="SBI">SBI</option>
+          <option value="HDFC">HDFC</option>
+        </select>
+        @if (expenseForm.get('bankAccount')?.invalid && expenseForm.get('bankAccount')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Bank Account is required</p>
+        }
+      </div>
+
+      <!-- Carry Forward -->
+      <div class="flex items-center gap-3 pt-2">
+        <input
+          type="checkbox"
+          formControlName="carryForward"
+          id="carryForward"
+          class="w-4 h-4 cursor-pointer"
+        />
+        <label for="carryForward" class="text-sm font-medium cursor-pointer">
+          Carry forward to next months
+        </label>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-auto flex gap-3 pt-4">
+        <button
+          type="button"
+          (click)="closeAddExpense()"
+          class="flex-1 rounded-lg bg-gray-200 py-2"
+        >
+          Cancel
+        </button>
+
+        <button type="submit" class="flex-1 rounded-lg bg-emerald-500 text-white py-2">
+          {{ expenseForm.get('type')?.value === 'income' ? 'Add Income' : 'Add Expense' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Bank Account Form Modal -->
+  <div
+    class="fixed top-0 right-0 z-50 h-full 2xl:max-w-md w-sm bg-white transform transition-transform duration-300 ease-in-out flex flex-col translate-x-full"
+    [class.translate-x-0]="showAddBankAccount()"
+    [class.translate-x-full]="!showAddBankAccount()"
+  >
+    <!-- Form Header -->
+    <div class="flex items-center justify-between p-4 border-b">
+      <h2 class="2xl:text-lg font-semibold">
+        {{ editingBankAccountId() ? 'Edit Bank Account' : 'Add Bank Account' }}
+      </h2>
+      <button class="text-2xl text-gray-500" (click)="closeBankAccountForm()">✕</button>
+    </div>
+
+    <!-- Form -->
+    <form
+      [formGroup]="bankAccountForm"
+      (ngSubmit)="submitBankAccount()"
+      class="flex flex-col 2xl:gap-4 gap-2 p-4 overflow-y-auto flex-1 2xl:text-[15px] text-[12px]"
+    >
+      <!-- Bank Name -->
+      <div>
+        <label class="text-sm font-medium">Bank Name <span class="text-red-500">*</span></label>
+        <input
+          type="text"
+          formControlName="bank_name"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+          placeholder="Enter bank name"
+        />
+        @if (bankAccountForm.get('bank_name')?.invalid && bankAccountForm.get('bank_name')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Bank name is required</p>
+        }
+      </div>
+
+      <!-- Balance -->
+      <div>
+        <label class="text-sm font-medium">Balance <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input
+            type="text"
+            #balanceInput
+            formControlName="balance"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none"
+            placeholder="0"
+            (input)="onBankAccountAmountChange($event)"
+          />
+        </div>
+        @if (bankAccountForm.get('balance')?.invalid && bankAccountForm.get('balance')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Balance is required and must be 0 or greater</p>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-auto flex gap-3 pt-4">
+        <button
+          type="button"
+          (click)="closeBankAccountForm()"
+          class="flex-1 rounded-lg bg-gray-200 py-2"
+        >
+          Cancel
+        </button>
+
+        <button type="submit" class="flex-1 rounded-lg bg-emerald-500 text-white py-2">
+          {{ editingBankAccountId() ? 'Update Account' : 'Add Account' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Carry Forward Modal -->
+  @if (showCarryForwardModal()) {
+  <div class="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 max-w-md w-11/12 max-h-[80vh] overflow-y-auto">
+      <h2 class="text-xl font-semibold mb-4 text-gray-800">Carry Forward Items Found</h2>
+      
+      <p class="text-sm text-gray-600 mb-4">
+        You have {{ carryForwardItems().length }} item(s) marked to carry forward from the previous month. Would you like to include them in this month?
+      </p>
+
+      <!-- List of carry forward items -->
+      <div class="mb-6 bg-gray-50 rounded-lg p-4">
+        @for (item of carryForwardItems(); track item.id) {
+        <div class="flex justify-between items-start mb-3 pb-3 border-b border-gray-200 last:border-b-0 last:mb-0 last:pb-0">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="text-lg">{{ item.emoji || '💳' }}</span>
+              <p class="font-medium text-gray-800">{{ item.expenseName }}</p>
+            </div>
+            <p class="text-xs text-gray-500">{{ item.category }}</p>
+          </div>
+          <div class="text-right ml-4">
+            <p class="font-semibold text-red-500">₹ {{ formatIndianRupee(item.amount) }}</p>
+            <p class="text-xs text-gray-500">{{ item.bankAccount }}</p>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="flex gap-3">
+        <button
+          type="button"
+          (click)="closeCarryForwardModal()"
+          class="flex-1 rounded-lg bg-gray-200 text-gray-800 py-2 font-medium hover:bg-gray-300 transition"
+        >
+          Decline
+        </button>
+
+        <button
+          type="button"
+          (click)="includeCarryForwardItems()"
+          class="flex-1 rounded-lg bg-emerald-500 text-white py-2 font-medium hover:bg-emerald-600 transition"
+        >
+          Include Items
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+</div>
+
+<ng-template #skeletonLoader>
+  <!-- Skeleton Loader -->
+  @for (item of [1, 2, 3]; track $index) {
+  <div class="skeleton-item">
+    <div class="flex place-items-start justify-between">
+      <div class="flex gap-5 place-items-center flex-1">
+        <!-- <div class="skeleton skeleton-avatar"></div> -->
+        <div class="flex flex-col gap-2 flex-1">
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-subtitle"></div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2 items-end">
+        <div class="skeleton skeleton-amount"></div>
+        <div class="skeleton skeleton-text"></div>
+      </div>
+    </div>
+  </div>
+  }
+</ng-template>

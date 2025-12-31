@@ -1,0 +1,31 @@
+<div class="relative">
+  <button
+    type="button"
+    (click)="togglePicker()"
+    class="2xl:px-3 2xl:py-2 px-2 py-1 border rounded-lg 2xl:text-xl text-[16px] mt-1 hover:bg-gray-100">
+    {{ selectedEmoji() }}
+  </button>
+
+  <div
+    *ngIf="showPicker()"
+    class="absolute top-full right-0 mt-2 bg-white border rounded-lg shadow-lg p-3 z-50 w-80"
+  >
+    <div class="grid grid-cols-8 gap-2 max-h-96 overflow-y-auto">
+      <button
+        *ngFor="let emoji of emojis"
+        type="button"
+        (click)="selectEmoji(emoji); $event.preventDefault(); $event.stopPropagation()"
+        class="text-2xl p-2 hover:bg-gray-200 rounded cursor-pointer transition-colors"
+      >
+        {{ emoji }}
+      </button>
+    </div>
+    <button
+      type="button"
+      (click)="closePicker()"
+      class="w-full mt-2 text-sm text-gray-600 hover:text-gray-900 py-1"
+    >
+      Close
+    </button>
+  </div>
+</div>
