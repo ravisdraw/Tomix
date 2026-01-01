@@ -25,31 +25,80 @@ export const BudgetStore = signalStore(
           patchState(store, { error });
         },
 
-        async loadBudgetByMonth(monthYear: string, userId: string) {
+        // async loadBudgetByMonth(monthYear: string, userId: string) {
+        //   try {
+        //     this.setLoading(true);
+        //     this.setError(null);
+        //     const entries = await budgetEntriesService.getBudgetEntriesByMonth(monthYear, userId);
+            
+        //     const transformedEntries = entries.map((e: any) => ({
+        //       id: e.id,
+        //       expenseName: e.expense_name,
+        //       emoji: e.emoji,
+        //       amount: e.amount,
+        //       type: e.type,
+        //       category: e.category,
+        //       bankAccount: e.bank_account,
+        //       carryForward: e.carry_forward || false,
+        //       mark_as_paid: e.mark_as_paid || false,
+        //     }));
+            
+        //     const budget: Record<string, any> = {};
+        //     budget[monthYear.split(' ').join('')] = {
+        //       income: transformedEntries.filter(e => e.type === 'income'),
+        //       expenses: transformedEntries.filter(e => e.type === 'expense')
+        //     };
+            
+        //     this.setBudget(budget);
+        //   } catch (err) {
+        //     this.setError(err instanceof Error ? err.message : 'Failed to load budget');
+        //     console.error('Error loading budget:', err);
+        //   } finally {
+        //     this.setLoading(false);
+        //   }
+        // },
+
+        async loadBudgetByMonthRange(monthYear:string[], userId: string) {
           try {
             this.setLoading(true);
             this.setError(null);
-            const entries = await budgetEntriesService.getBudgetEntriesByMonth(monthYear, userId);
-            
-            // Transform database entries to camelCase format
-            const transformedEntries = entries.map((e: any) => ({
-              id: e.id,
-              expenseName: e.expense_name,
-              emoji: e.emoji,
-              amount: e.amount,
-              type: e.type,
-              category: e.category,
-              bankAccount: e.bank_account,
-              carryForward: e.carry_forward || false,
-            }));
-            
-            // Transform flat array into organized budget object
+            const entries = await budgetEntriesService.getBudgetEntriesByDateRange(monthYear, userId);
             const budget: Record<string, any> = {};
-            budget[monthYear.split(' ').join('')] = {
-              income: transformedEntries.filter(e => e.type === 'income'),
-              expenses: transformedEntries.filter(e => e.type === 'expense')
-            };
-            
+
+            // Transform database entries to camelCase format and organize by monthYear
+            entries.forEach((e: any) => {
+              const monthYearKey = e.month_year.split(' ').join('');
+              if (!budget[monthYearKey]) {
+                budget[monthYearKey] = { income: [], expenses: [] };
+              }
+
+              if (e.type === 'income') {
+                budget[monthYearKey].income.push({
+                  id: e.id,
+                  expenseName: e.expense_name,
+                  emoji: e.emoji,
+                  amount: e.amount,
+                  type: e.type,
+                  category: e.category,
+                  bankAccount: e.bank_account,
+                  carryForward: e.carry_forward || false,
+                  mark_as_paid: e.mark_as_paid || false
+                });
+              } else {
+                budget[monthYearKey].expenses.push({
+                  id: e.id,
+                  expenseName: e.expense_name,
+                  emoji: e.emoji,
+                  amount: e.amount,
+                  type: e.type,
+                  category: e.category,
+                  bankAccount: e.bank_account,
+                  carryForward: e.carry_forward || false,
+                  mark_as_paid: e.mark_as_paid || false
+                });
+              }
+            });
+
             this.setBudget(budget);
           } catch (err) {
             this.setError(err instanceof Error ? err.message : 'Failed to load budget');
@@ -97,6 +146,22 @@ export const BudgetStore = signalStore(
           } catch (err) {
             this.setError(err instanceof Error ? err.message : 'Failed to update entry');
             console.error('Error updating budget entry:', err);
+            throw err;
+          } finally {
+            this.setLoading(false);
+          }
+        },
+
+        async markBudgetEntryAsPaid(id: string, isPaid: boolean) {
+          try {
+            this.setLoading(true);
+            this.setError(null);
+
+            const updatedEntry = await budgetEntriesService.markAsPaid(id, isPaid);
+            return updatedEntry;
+          } catch (err) {
+            this.setError(err instanceof Error ? err.message : 'Failed to mark entry as paid');
+            console.error('Error marking budget entry as paid:', err);
             throw err;
           } finally {
             this.setLoading(false);

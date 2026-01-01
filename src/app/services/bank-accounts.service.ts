@@ -6,6 +6,7 @@ export interface BankAccount {
   user_id: string;
   bank_name: string;
   balance: number;
+  after_expense_paid: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -63,6 +64,19 @@ export class BankAccountsService {
       .single();
 
     if (error) throw new Error(`Failed to update bank account: ${error.message}`);
+    return data;
+  }
+
+  // Update an after_expense_paid field specifically
+  async updateAfterExpensePaid(id: string, afterExpensePaid: number): Promise<BankAccount> {
+    const { data, error } = await this.supabaseService 
+      .getClient()
+      .from(this.tableName)
+      .update({ after_expense_paid: afterExpensePaid })
+      .eq('id', id)
+      .select()
+      .single();  
+    if (error) throw new Error(`Failed to update after_expense_paid: ${error.message}`);
     return data;
   }
 

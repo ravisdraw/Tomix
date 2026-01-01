@@ -12,6 +12,7 @@ export interface BudgetRecord {
   category: string;
   bank_account: string;
   carry_forward?: boolean;
+  mark_as_paid?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -56,6 +57,22 @@ export class BudgetEntriesService {
   }
 
   /**
+   * Mark a budget entry as paid
+   */
+  async markAsPaid(id: string, isPaid: boolean): Promise<BudgetRecord> {
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .from(this.tableName)
+      .update({ mark_as_paid: isPaid })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to mark entry as paid: ${error.message}`);
+    return data;
+  }
+
+  /**
    * Delete a budget entry
    */
   async deleteBudgetEntry(id: string): Promise<void> {
@@ -88,8 +105,7 @@ export class BudgetEntriesService {
    * Get all budget entries within a date range
    */
   async getBudgetEntriesByDateRange(
-    startDate: string,
-    endDate: string,
+    months: string[],
     userId: string
   ): Promise<BudgetRecord[]> {
     const { data, error } = await this.supabaseService
@@ -97,8 +113,7 @@ export class BudgetEntriesService {
       .from(this.tableName)
       .select('*')
       .eq('user_id', userId)
-      .gte('created_at', startDate)
-      .lte('created_at', endDate)
+      .in('month_year', months)
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(`Failed to fetch entries by date range: ${error.message}`);

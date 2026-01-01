@@ -57,6 +57,7 @@ interface BudgetEntry {
   category: string;
   bankAccount: string;
   carryForward?: boolean;
+  mark_as_paid?: boolean;
 }
 
 interface MonthBudget {
@@ -107,6 +108,9 @@ export class Budget implements OnInit {
   carryForwardItems = signal<BudgetEntry[]>([]);
   previousMonth = signal<string>('');
   previousMonthKey = signal<string>('');
+  selectedExpenses = signal<Map<string | number, number>>(new Map());
+  totalSelectedExpense = signal<number>(0);
+  paidExpenses = signal<Map<string | number, boolean>>(new Map());
 
   // Computed property for bar chart data
   chartData = computed(() => ({
@@ -198,8 +202,6 @@ export class Budget implements OnInit {
   });
 
   totalExpense = computed(() => {
-    console.log(this.expenseItems());
-
     return this.expenseItems().reduce(
       (sum: number, item: BudgetEntry) => sum + (item.amount || 0),
       0
@@ -228,18 +230,26 @@ export class Budget implements OnInit {
     // Set up effect to watch for month changes and reload data
     effect(() => {
       const currentMonth = this.monthStore.month();
-      const previousMonth = this.previousMonth();
+      const prev = this.previousMonth();
       const userId = this.userId();
 
-      // Only load data if we have a userId and the month has changed
-      if (userId && previousMonth && currentMonth !== previousMonth) {
-        // Month has changed, check for carry forward items
-        this.checkForCarryForwardItems();
+      // Do nothing until we have a user
+      if (!userId) return;
+
+      // Initial load: previousMonth not yet set
+      if (!prev) {
+        this.previousMonth.set(currentMonth);
+        // this.loadCurrentMonthData();
+        this.loadChartData();
+        return;
       }
 
-      if (userId) {
+      // Month changed: check carry forward items and reload
+      if (currentMonth !== prev) {
+        this.checkForCarryForwardItems();
         this.previousMonth.set(currentMonth);
-        this.loadCurrentMonthData();
+        // this.loadCurrentMonthData();
+        this.loadChartData();
       }
     });
 
@@ -287,42 +297,48 @@ export class Budget implements OnInit {
     return userId;
   }
 
-  async loadCurrentMonthData() {
-    const monthYear = this.monthStore.month();
-    const userId = this.userId();
-    if (userId) {
-      this.isCheckingData.set(true);
-      try {
-        // Load the data from Supabase
-        await this.budgetStore.loadBudgetByMonth(monthYear, userId);
+  // async loadCurrentMonthData() {
+  //   const monthYear = this.monthStore.month();
+  //   const userId = this.userId();
+  //   if (userId) {
+  //     this.isCheckingData.set(true);
+  //     try {
+  //       await this.budgetStore.loadBudgetByMonth(monthYear, userId);
 
-        // Check if data exists based on loaded items
-        const incomeCount = this.incomeItems().length;
-        const expenseCount = this.expenseItems().length;
-        const hasData = incomeCount > 0 || expenseCount > 0;
+  //       const incomeCount = this.incomeItems().length;
+  //       const expenseCount = this.expenseItems().length;
+  //       const hasData = incomeCount > 0 || expenseCount > 0;
 
-        this.hasDataForMonth.set(hasData);
-        console.log(
-          `Data loaded for ${monthYear}: ${
-            hasData ? 'Found' : 'No data found'
-          } (Income: ${incomeCount}, Expenses: ${expenseCount})`
-        );
+  //       this.hasDataForMonth.set(hasData);
+  //       console.log(
+  //         `Data loaded for ${monthYear}: ${hasData ? 'Found' : 'No data found'
+  //         } (Income: ${incomeCount}, Expenses: ${expenseCount})`
+  //       );
 
-        // Load chart data
-        await this.loadChartData(userId);
+  //       this.setMarkAsPaidMap();
 
-        // Aggregate expenses by category for current month
-        await this.aggregateExpensesByCategory();
-      } catch (error) {
-        console.error('Error loading month data:', error);
-        this.hasDataForMonth.set(false);
-      } finally {
-        this.isCheckingData.set(false);
-      }
-    }
+  //       await this.loadChartData();
+
+  //       await this.aggregateExpensesByCategory();
+  //     } catch (error) {
+  //       console.error('Error loading month data:', error);
+  //       this.hasDataForMonth.set(false);
+  //     } finally {
+  //       this.isCheckingData.set(false);
+  //     }
+  //   }
+  // }
+
+  private async setMarkAsPaidMap() {
+    this.expenseItems().forEach((item) => {
+      this.paidExpenses().set(item.id, item.mark_as_paid || false);
+    });
+    console.log(this.paidExpenses());
   }
 
-  private async loadChartData(userId: string) {
+  private async loadChartData() {
+    const userId = this.userId();
+    if (!userId) return;
     try {
       const last5Months = this.getLast5Months();
       const labels: string[] = [];
@@ -330,38 +346,77 @@ export class Budget implements OnInit {
       const incomeData: number[] = [];
       const savingsData: number[] = [];
 
-      for (const monthYear of last5Months) {
-        labels.push(monthYear);
+      try {
+        let entries: any[] = [];
+        entries = await this.budgetEntriesService.getBudgetEntriesByDateRange(last5Months, userId);
 
-        try {
-          const entries = await this.budgetEntriesService.getBudgetEntriesByMonth(monthYear, userId);
+        this.setCurrentMonth(entries)
+
+        await this.aggregateExpensesByCategory();
+
+        for (const monthYear of last5Months) {
+          labels.push(monthYear);
           const totalExpense = entries
-            .filter((entry) => entry.type === 'expense')
+            .filter((entry) => entry.type === 'expense' && entry.month_year === monthYear)
             .reduce((sum, entry) => sum + entry.amount, 0);
           const totalIncome = entries
-            .filter((entry) => entry.type === 'income')
+            .filter((entry) => entry.type === 'income' && entry.month_year === monthYear)
             .reduce((sum, entry) => sum + entry.amount, 0);
           const totalSavings = entries
-            .filter((entry) => entry.type === 'expense')
+            .filter((entry) => entry.type === 'expense' && entry.month_year === monthYear)
             .filter((expense) => expense.category === 'Investment')
             .reduce((sum, cat) => sum + cat.amount, 0);
-          expenseData.push(totalExpense);
+          expenseData.push(totalExpense - totalSavings);
           incomeData.push(totalIncome);
           savingsData.push(totalSavings);
-        } catch {
-          expenseData.push(0);
-          incomeData.push(0);
-          savingsData.push(0);
         }
+        this.chartLabels.set(labels);
+        this.chartExpenseData.set(expenseData);
+        this.chartIncomeData.set(incomeData);
+        this.chartSavingsData.set(savingsData);
+      } catch (error) {
+        expenseData.push(0);
+        incomeData.push(0);
+        savingsData.push(0);
+      } finally {
+        this.isCheckingData.set(false);
       }
-
-      this.chartLabels.set(labels);
-      this.chartExpenseData.set(expenseData);
-      this.chartIncomeData.set(incomeData);
-      this.chartSavingsData.set(savingsData);
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Error loading chart data:', error);
     }
+    finally {
+      this.isCheckingData.set(false);
+    }
+  }
+
+  setCurrentMonth(entries: any[]) {
+    const monthYear = this.monthStore.month();
+
+    entries = entries.filter(e => e.month_year === monthYear);
+    // Transform database entries to camelCase format
+    const transformedEntries = entries.map((e: any) => ({
+      id: e.id,
+      expenseName: e.expense_name,
+      emoji: e.emoji,
+      amount: e.amount,
+      type: e.type,
+      category: e.category,
+      bankAccount: e.bank_account,
+      carryForward: e.carry_forward || false,
+      mark_as_paid: e.mark_as_paid || false,
+    }));
+
+    // Transform flat array into organized budget object
+    const budget: Record<string, any> = {};
+    budget[monthYear.split(' ').join('')] = {
+      income: transformedEntries.filter(e => e.type === 'income'),
+      expenses: transformedEntries.filter(e => e.type === 'expense')
+    };
+
+    this.budgetStore.setBudget(budget);
+
+    this.setMarkAsPaidMap();
   }
 
   private async aggregateExpensesByCategory() {
@@ -455,7 +510,7 @@ export class Budget implements OnInit {
 
   private async loadExpenseCategories(userId: string) {
     try {
-      const categories = await this.expenseCategoriesService.getExpenseCategories(userId);
+      const categories = (await this.expenseCategoriesService.getExpenseCategories(userId)) || [];
       this.expenseCategories.set(categories);
     } catch (error) {
       console.error('Error loading categories:', error);
@@ -542,6 +597,7 @@ export class Budget implements OnInit {
     const editingId = this.editingItemId();
 
     try {
+      // moved updateAfterExpensePaidStatus to after saving and reloading data so totals include the new/updated expense
       if (editingId) {
         // Update existing item in Supabase
         await this.budgetStore.updateBudgetEntry(String(editingId), {
@@ -574,12 +630,37 @@ export class Budget implements OnInit {
 
       this.updateExpenseCategory(form.category);
       // Reload data from Supabase to sync with database
-      await this.loadCurrentMonthData();
+      await this.loadChartData();
+      // Recalculate and persist bank after-expense-paid using updated totals
+      await this.updateAfterExpensePaidStatus(form.bankAccount);
       this.resetForm();
       this.closeAddExpense();
     } catch (error) {
       console.error('Error saving budget entry:', error);
       alert('Failed to save budget entry. Please try again.');
+    }
+  }
+
+  async updateAfterExpensePaidStatus(bank: string) {
+    const account = this.bankAccounts().find(acc => acc.bank_name.toLowerCase() === bank.toLowerCase());
+    let afterExpensePaid = 0;
+    if (account) {
+      const totalExpenses = this.totalExpense();
+      afterExpensePaid = account.balance - totalExpenses;
+      account.after_expense_paid = afterExpensePaid;
+      this.bankAccounts.set([...this.bankAccounts()]);
+      try {
+        await this.bankAccountsService.updateBankAccount(account.id, {
+          after_expense_paid: afterExpensePaid,
+        });
+        // reload bank accounts to ensure UI stays in sync with DB
+        const userId = this.userId();
+        if (userId) {
+          await this.loadBankAccounts(userId);
+        }
+      } catch (error) {
+        console.error('Error updating after expense paid status:', error);
+      }
     }
   }
 
@@ -661,7 +742,7 @@ export class Budget implements OnInit {
     try {
       await this.budgetStore.deleteBudgetEntry(String(itemId));
       // Reload data from Supabase
-      await this.loadCurrentMonthData();
+      await this.loadChartData();
     } catch (error) {
       console.error('Error deleting budget entry:', error);
       alert('Failed to delete budget entry. Please try again.');
@@ -693,6 +774,7 @@ export class Budget implements OnInit {
       type: item.type,
       category: item.category,
       bankAccount: item.bankAccount,
+      carryForward: item.carryForward || false,
     });
     this.showAddExpense.set(true);
   }
@@ -757,6 +839,19 @@ export class Budget implements OnInit {
     }
   }
 
+  async setBankBalance(accountId: string, newBalance: number) {
+    try {
+      await this.bankAccountsService.updateBankAccount(accountId, { balance: newBalance });
+      const userId = this.userId();
+      if (userId) {
+        await this.loadBankAccounts(userId);
+      } 
+    } catch (error) {
+      console.error('Error updating bank balance:', error);
+      alert('Failed to update bank balance. Please try again.');
+    } 
+  }
+
   async submitBankAccount() {
     if (this.bankAccountForm.invalid) {
       return;
@@ -791,6 +886,7 @@ export class Budget implements OnInit {
           user_id: userId,
           bank_name: form.bank_name.charAt(0).toUpperCase() + form.bank_name.slice(1).toLowerCase(),
           balance: balanceValue,
+          after_expense_paid: balanceValue,
         });
         console.log('Bank account created successfully');
       }
@@ -858,7 +954,7 @@ export class Budget implements OnInit {
       // Fetch the previous month's data directly from Supabase
       const previousMonthString = this.previousMonth();
       console.log('Checking carry forward for month:', previousMonthString);
-      
+
       const previousMonthEntries = await this.budgetEntriesService.getBudgetEntriesByMonth(
         previousMonthString,
         userId
@@ -870,10 +966,10 @@ export class Budget implements OnInit {
       const carryForwardExpenses = previousMonthEntries
         .filter((entry: any) => {
           // Handle different boolean representations
-          const isCarryForward = entry.carry_forward === true || 
-                               entry.carry_forward === 'true' || 
-                               entry.carry_forward === 'TRUE' || 
-                               entry.carry_forward === 1;
+          const isCarryForward = entry.carry_forward === true ||
+            entry.carry_forward === 'true' ||
+            entry.carry_forward === 'TRUE' ||
+            entry.carry_forward === 1;
           return isCarryForward && (entry.type === 'expense' || entry.type === 'income');
         })
         .map((entry: any) => ({
@@ -904,15 +1000,15 @@ export class Budget implements OnInit {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const [monthStr, yearStr] = this.previousMonth().split(' ');
     const monthIndex = monthNames.indexOf(monthStr);
-    
+
     let prevMonthIndex = monthIndex - 1;
     let prevYear = parseInt(yearStr);
-    
+
     if (prevMonthIndex < 0) {
       prevMonthIndex = 11;
       prevYear--;
     }
-    
+
     const prevMonth = monthNames[prevMonthIndex];
     return `${prevMonth}${prevYear}`;
   }
@@ -943,7 +1039,7 @@ export class Budget implements OnInit {
       }
 
       // Reload current month data to show new items
-      await this.loadCurrentMonthData();
+      await this.loadChartData();
       this.closeCarryForwardModal();
     } catch (error) {
       console.error('Error including carry forward items:', error);
@@ -955,5 +1051,62 @@ export class Budget implements OnInit {
     this.showCarryForwardModal.set(false);
     this.carryForwardItems.set([]);
     this.previousMonthKey.set('');
+  }
+
+  getSelectedItems(event: any, itemId: string | number, amount: number) {
+    const isChecked = event.target.checked;
+    if (isChecked) {
+      this.selectedExpenses().set(itemId, amount);
+    } else {
+      this.selectedExpenses().delete(itemId);
+    }
+    // Recalculate total selected expense
+    let total = 0;
+    this.selectedExpenses().forEach((amount) => {
+      total += amount;
+    });
+    this.totalSelectedExpense.set(total);
+  }
+
+  async markAsPaid(itemId: string | number, amount: number, bank: string) {
+    let status:boolean = false;
+    if (this.paidExpenses().get(itemId) === true) {
+      this.paidExpenses().set(itemId, false);
+      status = false;
+    } else {
+      this.paidExpenses().set(itemId, true);
+      status = true;
+    }
+    console.log(this.paidExpenses());
+    try {
+      await this.budgetStore.markBudgetEntryAsPaid(String(itemId), this.paidExpenses().get(itemId) || false);
+      await this.updateBankBalance(amount,bank,status);
+    } catch (error) {
+      console.error('Error marking budget entry as paid:', error);
+      alert('Failed to update payment status. Please try again.');
+    }
+    this.selectedItemId.set(null);
+  }
+
+  async updateBankBalance(amount: number, bank: string, status: boolean) {
+    const account = this.bankAccounts().find(acc => acc.bank_name.toLowerCase() === bank.toLowerCase());
+    let amountToUpdate = amount;
+    if (status) {
+      amountToUpdate = account.balance - amount;
+    } else {
+      amountToUpdate = account.balance + amount;
+    }
+    try {
+        await this.bankAccountsService.updateBankAccount(account.id, {
+          balance: amountToUpdate,
+        });
+        // reload bank accounts to ensure UI stays in sync with DB
+        const userId = this.userId();
+        if (userId) {
+          await this.loadBankAccounts(userId);
+        }
+      } catch (error) {
+        console.error('Error updating after expense paid status:', error);
+      }
   }
 }

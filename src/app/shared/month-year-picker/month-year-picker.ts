@@ -44,7 +44,7 @@ export class MonthYearPicker implements AfterViewInit {
   });
 
   ngAfterViewInit() {
-    this.setupScrollListener();
+    // this.setupScrollListener();
     this.setupOutsideClickListener();
   }
 
