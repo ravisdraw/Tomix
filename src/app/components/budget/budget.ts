@@ -645,8 +645,9 @@ export class Budget implements OnInit {
     const account = this.bankAccounts().find(acc => acc.bank_name.toLowerCase() === bank.toLowerCase());
     let afterExpensePaid = 0;
     if (account) {
-      const totalExpenses = this.totalExpense();
-      afterExpensePaid = account.balance - totalExpenses;
+      // const totalExpenses = this.totalExpense();
+      const totalUnpaidExpenses = this.expenseItems().filter(item => item.bankAccount.toLowerCase() === bank.toLowerCase() && !item.mark_as_paid).reduce((sum, item) => sum + item.amount, 0);
+      afterExpensePaid = account.balance - totalUnpaidExpenses;
       account.after_expense_paid = afterExpensePaid;
       this.bankAccounts.set([...this.bankAccounts()]);
       try {
