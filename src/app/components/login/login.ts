@@ -24,6 +24,7 @@ export class Login implements OnInit, OnDestroy {
     const session = this.authService.getSession();
     if (session) {
       this.router.navigate(['/dashboard']);
+      this.setUserId(session);
       return;
     }
 
@@ -31,8 +32,13 @@ export class Login implements OnInit, OnDestroy {
     this.authService.session$.pipe(takeUntil(this.destroy$)).subscribe((session) => {
       if (session) {
         this.router.navigate(['/dashboard']);
+        this.setUserId(session);
       }
     });
+  }
+
+  setUserId(session: any) {
+    localStorage.setItem('userId', session.user.id);
   }
 
   async signInWithGoogle() {
