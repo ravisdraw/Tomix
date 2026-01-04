@@ -7,5 +7,6 @@ export const routes: Routes = [
     { path: '', redirectTo: 'login', pathMatch: 'full' },
     { path: 'login', component: Login },
     { path: 'dashboard', component: Dashboard },
-    { path: 'budget', component: Budget }
+    { path: 'budget', component: Budget },
+    { path: 'loans', loadComponent: () => import('./components/loans/loans').then(m => m.Loans) },
 ];

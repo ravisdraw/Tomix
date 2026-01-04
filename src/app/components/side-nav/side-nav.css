@@ -1,0 +1,58 @@
+/* Collapse/Expand animation for chevron icon */
+.bx-chevron-down {
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Smooth slide animation for section items */
+.section-items {
+  animation: slideDown 0.3s ease-in-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    overflow: visible;
+  }
+}
+
+/* Smooth slide-up animation when collapsing */
+.section-items.collapsed {
+  animation: slideUp 0.3s ease-in-out forwards;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 1;
+    max-height: 500px;
+    overflow: hidden;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+  }
+}
+
+/* Hover effects for nav items */
+.nav-item {
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  transform: translateX(4px);
+}
+
+/* Section header hover effect */
+.section-header {
+  transition: color 0.2s ease;
+}
+
+.section-header:hover {
+  color: #08b783;
+}

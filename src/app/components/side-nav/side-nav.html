@@ -8,54 +8,65 @@
 
     <div class="w-full flex flex-col place-items-center justify-center p-3 2xl:px-12 px-8 font-medium gap-1">
         <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
-         [ngStyle]="{'background-color': selectedNavItem() === 'dashboard' ? '#08b78352' : ''}"
-         (click)="navigateTo('dashboard')">
-            <i class='bx bx-pie-chart-alt 2xl:text-[30px] text-[25px]' style='color:#0F1F3C'></i> 
+            [ngStyle]="{'background-color': selectedNavItem() === 'dashboard' ? '#08b78352' : ''}"
+            (click)="navigateTo('dashboard')">
+            <i class='bx bx-pie-chart-alt 2xl:text-[30px] text-[25px]' style='color:#0F1F3C'></i>
             <div class="text-[14px] 2xl:text-[16px]">Dashboard</div>
         </div>
 
-       <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
-        (click)="navigateTo('budget')" [ngStyle]="{'background-color': selectedNavItem() === 'budget' ? '#08b78352' : ''}"> 
-            <i class='bx bx-note-book 2xl:text-[28px] text-[23px]' style='color:#0F1F3C'></i> 
+        <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
+            (click)="navigateTo('budget')"
+            [ngStyle]="{'background-color': selectedNavItem() === 'budget' ? '#08b78352' : ''}">
+            <i class='bx bx-note-book 2xl:text-[28px] text-[23px]' style='color:#0F1F3C'></i>
             <div class="text-[14px] 2xl:text-[16px]">Budget</div>
         </div>
     </div>
 
-    <!--Debts-->
+    <!-- Sections: Debts, Investments, Insurance, Savings -->
 
-    <div class="text-[#7D7D7D] font-medium flex  2xl:px-12 px-8 place-items-center justify-between 2xl:pt-3  cursor-pointer">
-        <div class="text-[14px] 2xl:text-[16px]">Debts</div>
-        <i class="bx bx-chevron-down text-[23px] 2xl:text-[28px]"></i>
-    </div>
-
-    <div class="w-full flex flex-col place-items-center justify-center p-3 2xl:px-12 px-8 font-medium gap-1">
-        <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-5 p-2 rounded-[10px] place-items-center cursor-pointer">
-            <i class='bx  bx-devices text-[23px] 2xl:text-[28px]' style='color:#0F1F3C'></i> 
-            <div class="text-[14px] 2xl:text-[16px]">Subscriptions</div>
+    @for(section of ['debts', 'investments', 'insurance', 'savings']; track section) {
+    <div class="w-full">
+        <!-- Section Header -->
+        <div
+            class="section-header text-[#7D7D7D] font-medium flex 2xl:px-12 px-8 place-items-center justify-between 2xl:pt-3 pt-2 cursor-pointer hover:text-[#08b783]"
+            (click)="handleCollapse(section)">
+            <div class="text-[14px] 2xl:text-[16px]">{{ sideNavItems()[section].label }}</div>
+            <i class="bx bx-chevron-down text-[23px] 2xl:text-[28px]"
+                [ngStyle]="{'transform': !sideNavItems()[section].isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)'}"></i>
         </div>
+
+        <!-- Section Items -->
+        @if(!sideNavItems()[section].isCollapsed) {
+        <div class="section-items w-full flex flex-col place-items-center justify-center p-3 2xl:px-12 px-8 font-medium gap-1">
+            @for(item of sideNavItems()[section].items; track item.label) {
+            <div
+                class="nav-item flex w-full hover:bg-[#08b78352] justify-self-start gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
+                (click)="navigateTo(item.path)"
+                 [ngStyle]="{'background-color': selectedNavItem() === item.path ? '#08b78352' : ''}">
+                <i class='{{ item.icon }} text-[23px] 2xl:text-[28px]' style='color:#0F1F3C'></i>
+                <div class="text-[14px] 2xl:text-[16px]">{{ item.label }}</div>
+            </div>
+            }
+        </div>
+        }
     </div>
+    }
 
     <!-- User Profile Section -->
     <div class="w-full flex flex-col place-items-center justify-center p-4 gap-3 border-t border-[#E0E0E0] mt-auto">
-        <div class="2xl:w-16 2xl:h-16 w-12 h-12 rounded-full bg-[#E0E0E0] overflow-hidden flex place-items-center justify-center">
+        <div
+            class="2xl:w-16 2xl:h-16 w-12 h-12 rounded-full bg-[#E0E0E0] overflow-hidden flex place-items-center justify-center">
             @if (userAvatar()) {
-                <img
-                    [src]="userAvatar()"
-                    alt="Profile Picture"
-                    class="w-full h-full object-cover"
-                />
+            <img [src]="userAvatar()" alt="Profile Picture" class="w-full h-full object-cover" />
             } @else {
-                <i class="bx bx-user 2xl:text-[40px] text-[35px]" style="color: #0F1F3C"></i>
+            <i class="bx bx-user 2xl:text-[40px] text-[35px]" style="color: #0F1F3C"></i>
             }
         </div>
         <div class="text-center">
             <p class="font-semibold 2xl:text-[14px] text-[12px] text-[#0F1F3C]">{{ userName() }}</p>
             <p class="2xl:text-[14px] text-[12px] text-[#7D7D7D]">{{ user()?.email }}</p>
         </div>
-        <button
-            (click)="logout()"
-            class="text-[12px] font-medium text-[#E74C3C] hover:text-[#C0392B] cursor-pointer"
-        >
+        <button (click)="logout()" class="text-[12px] font-medium text-[#E74C3C] hover:text-[#C0392B] cursor-pointer">
             Logout
         </button>
     </div>
