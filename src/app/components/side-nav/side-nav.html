@@ -1,21 +1,26 @@
-<div class="h-full w-full bg-[#F7FCFC] flex flex-col">
-    <div class="w-full flex 2xl:text-[35px] text-[25px] p-5 justify-around place-items-center">
+<div class="block md:hidden" (click)="toggleSideNav()">
+    <i class='bx bx-menu bg-amber-400 absolute left-2 top-2 p-3 rounded-md z-20'></i> 
+</div>
+<div class="h-full w-full bg-[#F7FCFC] flex flex-col relative" [ngClass]="openSideNav() ? '': 'hidden'" 
+    style="transition: transform 0.3s ease-in-out;">
+    
+    <div class="w-full flex 2xl:text-[35px] text-[25px] p-2 md:p-5 justify-around place-items-center">
         <!-- <div></div> -->
-        <div class="font-semibold">Tomix</div>
+        <div class="font-medium md:font-semibold ">Tomix</div>
     </div>
 
     <!--Default Menu-->
 
-    <div class="w-full flex flex-col place-items-center justify-center p-3 2xl:px-12 px-8 font-medium gap-1">
-        <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
+    <div class="w-full flex flex-col place-items-center justify-center md:p-3 2xl:px-12 px-3 md:px-8 font-medium gap-1">
+        <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-2 md:gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
             [ngStyle]="{'background-color': selectedNavItem() === 'dashboard' ? '#08b78352' : ''}"
-            (click)="navigateTo('dashboard')">
+            (click)="navigateTo('dashboard'); onWindowResize()">
             <i class='bx bx-pie-chart-alt 2xl:text-[30px] text-[25px]' style='color:#0F1F3C'></i>
             <div class="text-[14px] 2xl:text-[16px]">Dashboard</div>
         </div>
 
-        <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
-            (click)="navigateTo('budget')"
+        <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-2 md:gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
+            (click)="navigateTo('budget'); onWindowResize()"
             [ngStyle]="{'background-color': selectedNavItem() === 'budget' ? '#08b78352' : ''}">
             <i class='bx bx-note-book 2xl:text-[28px] text-[23px]' style='color:#0F1F3C'></i>
             <div class="text-[14px] 2xl:text-[16px]">Budget</div>
@@ -28,7 +33,7 @@
     <div class="w-full">
         <!-- Section Header -->
         <div
-            class="section-header text-[#7D7D7D] font-medium flex 2xl:px-12 px-8 place-items-center justify-between 2xl:pt-3 pt-2 cursor-pointer hover:text-[#08b783]"
+            class="section-header text-[#7D7D7D] font-medium flex 2xl:px-12 px-3 md:px-8 place-items-center justify-between 2xl:pt-3 pt-2 cursor-pointer hover:text-[#08b783]"
             (click)="handleCollapse(section)">
             <div class="text-[14px] 2xl:text-[16px]">{{ sideNavItems()[section].label }}</div>
             <i class="bx bx-chevron-down text-[23px] 2xl:text-[28px]"
@@ -37,11 +42,11 @@
 
         <!-- Section Items -->
         @if(!sideNavItems()[section].isCollapsed) {
-        <div class="section-items w-full flex flex-col place-items-center justify-center p-3 2xl:px-12 px-8 font-medium gap-1">
+        <div class="section-items w-full flex flex-col place-items-center justify-center p-3 2xl:px-12 px-3 md:px-8 font-medium gap-1">
             @for(item of sideNavItems()[section].items; track item.label) {
             <div
-                class="nav-item flex w-full hover:bg-[#08b78352] justify-self-start gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
-                (click)="navigateTo(item.path)"
+                class="nav-item flex w-full hover:bg-[#08b78352] justify-self-start gap-2 md:gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
+                (click)="navigateTo(item.path); onWindowResize()"
                  [ngStyle]="{'background-color': selectedNavItem() === item.path ? '#08b78352' : ''}">
                 <i class='{{ item.icon }} text-[23px] 2xl:text-[28px]' style='color:#0F1F3C'></i>
                 <div class="text-[14px] 2xl:text-[16px]">{{ item.label }}</div>

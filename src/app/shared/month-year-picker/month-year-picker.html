@@ -5,31 +5,35 @@
     <i class="bx bxs-calendar-alt" style="color: #08B783; font-size: 20px;"></i>
   </button>
 
-  <!-- Scroll Container -->
-  <div class="month-scroll-container" #container>
-    <!-- Left fade effect -->
-    <div class="fade-left"></div>
-    
-    <!-- Scrollable months -->
-    <div class="month-scroll" #monthScroll>
-      @for (item of monthList(); track item.label) {
-        <button
-          (click)="selectMonth(item.month, item.year)"
-          [class.active]="
-            monthStore.month() === item.label
-          "
-          class="month-btn"
-        >
-          <span class="month-name">{{ item.month }}</span>
-          <span class="month-year">{{ item.year }}</span>
-        </button>
-      }
+  <div class="hidden md:block">
+          <!-- Scroll Container -->
+      <div class="month-scroll-container" #container>
+        <!-- Left fade effect -->
+        <div class="fade-left"></div>
+        
+        <!-- Scrollable months -->
+        <div class="month-scroll" #monthScroll>
+          @for (item of monthList(); track item.label) {
+            <button
+              (click)="selectMonth(item.month, item.year)"
+              [class.active]="
+                monthStore.month() === item.label
+              "
+              class="month-btn"
+            >
+              <span class="month-name">{{ item.month }}</span>
+              <span class="month-year">{{ item.year }}</span>
+            </button>
+          }
+        </div>
+        
+        <!-- Right fade effect -->
+        <div class="fade-right"></div>
+      </div>
     </div>
-    
-    <!-- Right fade effect -->
-    <div class="fade-right"></div>
   </div>
-</div>
+
+
 
 <!-- Picker Modal -->
 @if (showPickerModal()) {

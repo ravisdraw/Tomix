@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, HostListener, signal } from '@angular/core';
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { SideNav } from "./components/side-nav/side-nav";
@@ -13,6 +13,7 @@ import { filter } from 'rxjs/operators';
 export class App {
   protected readonly title = signal('tomix');
   protected currentUrl = signal<string>('');
+  protected openSideNav = signal<boolean>(true);
 
   constructor(public router: Router) {
     // Set initial URL
@@ -29,5 +30,26 @@ export class App {
   isLoginPage(): boolean {
     return this.router.url.includes('login');
   }
+
+  
+  @HostListener('window:resize')
+  onWindowResize() {
+    // Open menu on larger screen
+    if (window.innerWidth >= 768) {
+      this.openSideNav.set(true);
+    }
+  }
+
+  toggleSideNav() {
+    this.openSideNav.update(val => !val);
+  }
+
+  closeSideNav() {
+    if (window.innerWidth < 768) {
+      this.openSideNav.set(false);
+    }
+  }
+
+  protected window = window;
 }
 

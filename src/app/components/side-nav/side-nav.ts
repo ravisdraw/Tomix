@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { User } from '@supabase/supabase-js';
@@ -28,6 +28,7 @@ export class SideNav implements OnInit {
   user = signal<User | null>(null);
   userName = signal<string>('');
   userAvatar = signal<string>('');
+  openSideNav = signal<boolean>(true);
   sideNavItems = signal<Record<string, NavSection>>({
     'debts': {
       label: 'Debts',
@@ -104,5 +105,24 @@ export class SideNav implements OnInit {
     const currentItems = this.sideNavItems();
     currentItems[section].isCollapsed = !currentItems[section].isCollapsed;
     this.sideNavItems.set({ ...currentItems });
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    console.log(window.innerWidth);
+    // Open menu on larger screen
+    if (window.innerWidth >= 768) {
+      this.openSideNav.set(true);
+    } else{
+      this.openSideNav.set(false);
+    }
+  }
+
+  toggleSideNav() {
+    this.openSideNav.update(val => !val);
+  }
+
+  closeSideNav() {
+    this.openSideNav.set(false);
   }
 }
