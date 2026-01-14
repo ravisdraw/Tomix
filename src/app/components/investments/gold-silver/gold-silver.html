@@ -1,0 +1,352 @@
+<div class="w-full h-full flex flex-col 2xl:px-8 md:px-5">
+  <!-- Header -->
+  <div class="w-full 2xl:h-[15%] flex place-items-center justify-between">
+    <div class="font-medium 2xl:text-[25px] text-[22px]">Gold & Silver Investments</div>
+    <div class="flex gap-3 justify-center place-items-center">
+      <div class="p-3 flex justify-center place-items-center">
+        <i class="bx bx-plus rounded-[10px] bg-[#08B783] p-3 2xl:text-[20px] text-[16px] font-bold"
+          style="color: #ffffff" (click)="openAddPlan()"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="w-full h-[85%] flex pb-5 2xl:gap-5 gap-2 flex-col">
+    <!-- Investment Plans Grid -->
+    <div class="w-full flex-1 rounded-[10px] bg-[#F7FCFC] p-5 overflow-hidden">
+      <div class="w-full h-full flex flex-col">
+        <div class="font-medium 2xl:text-[20px] text-[16px] mb-4 shrink-0">Your Investment Plans</div>
+        
+        <div class="flex-1 overflow-y-auto min-h-0">
+          @if (isCheckingData()) {
+          <!-- Skeleton Loader -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (item of [1, 2, 3]; track $index) {
+            <div class="skeleton-card">
+              <div class="skeleton skeleton-card-content"></div>
+            </div>
+            }
+          </div>
+          } @else if (allPlans().length === 0) {
+          <div class="w-full flex items-center justify-center text-gray-400 h-full">
+            No investment plans added
+          </div>
+          } @else {
+          <!-- Investment Plans Display -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (plan of allPlans(); track plan.plan_id; let idx = $index) {
+            <div class="plan-container">
+              <div class="investment-plan">
+                <!-- Front of Plan Card -->
+                <div class="plan-face plan-front" [style.background]="getPlanGradient(plan.investment_type)">
+                  <div class="plan-header">
+                    <div class="plan-type">
+                      <i class='bx' [class.bx-trophy]="plan.investment_type === 'gold'" 
+                         [class.bx-medal]="plan.investment_type === 'silver'" 
+                         style='font-size: 24px; color: #fff;'></i>
+                      <span class="uppercase text-sm font-bold">{{ plan.investment_type }}</span>
+                    </div>
+                    <div class="plan-icon">
+                      <button type="button" 
+                              (click)="showPlanHistory(plan); $event.stopPropagation()"
+                              class="bg-white/20 hover:bg-white/30 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                        <i class="bx bx-info-circle text-white text-xl"></i>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="plan-name">
+                    <div class="text-lg font-bold">{{ plan.plan_name }}</div>
+                  </div>
+                  
+                  <div class="plan-info">
+                    <div class="info-row">
+                      <span class="info-label">Total Amount Invested</span>
+                      <span class="info-value">₹{{ formatIndianRupee(getPlanTotalAmount(plan.plan_id!)) }}</span>
+                    </div>
+                    <div class="info-row mt-2">
+                      <span class="info-label">Total Grams Saved</span>
+                      <span class="info-value">{{ getPlanTotalGramsFromMap(plan.plan_id!).toFixed(3) }}g</span>
+                    </div>
+                    <div class="info-row mt-2">
+                      <span class="info-label">Current Rate</span>
+                      <div class="flex items-center gap-1">
+                        <span class="text-xs">₹</span>
+                        <input type="number" step="0.01" 
+                               [value]="getCurrentRate(plan.plan_id!)"
+                               (input)="updateCurrentRate(plan.plan_id!, +$any($event.target).value)"
+                               class="w-20 px-1 py-0.5 text-xs rounded border border-white/30 bg-white/20 text-white placeholder-white/70"
+                               placeholder="0.00" />
+                        <span class="text-xs">/g</span>
+                      </div>
+                    </div>
+                    @if (getCurrentRate(plan.plan_id!) > 0) {
+                    <div class="info-row mt-2 bg-white/20 p-2 px-3 rounded">
+                      <span class="info-label">Current Value</span>
+                      <span class="info-value font-bold">₹{{ formatIndianRupee(getCurrentValue(plan.plan_id!, getPlanTotalGramsFromMap(plan.plan_id!))) }}</span>
+                    </div>
+                    }
+                  </div>
+
+                  <!-- Action Buttons -->
+                  @if (selectedPlanId() === plan.plan_id) {
+                  <div class="plan-actions" (click)="$event.stopPropagation()">
+                    <button (click)="editPlan(plan)" class="action-btn edit-btn">
+                      <i class='bx bx-edit-alt'></i>
+                    </button>
+                    <button (click)="deletePlan(plan.id!)" class="action-btn delete-btn">
+                      <i class='bx bx-trash-alt'></i>
+                    </button>
+                  </div>
+                  }
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+          }
+        </div>
+
+        <!-- Plan History Table -->
+        @if (showHistoryForPlan()) {
+        <div class="mt-6 border-t pt-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-medium 2xl:text-[18px] text-[16px]">Investment History</h3>
+            <button type="button" 
+                    (click)="showHistoryForPlan.set(null); planHistory.set([])"
+                    class="text-gray-500 hover:text-gray-700">
+              <i class="bx bx-x text-2xl"></i>
+            </button>
+          </div>
+
+          @if (isLoadingHistory()) {
+          <div class="text-center text-gray-400 py-8">
+            Loading history...
+          </div>
+          } @else if (planHistory().length === 0) {
+          <div class="text-center text-gray-400 py-8">
+            No history found for this plan
+          </div>
+          } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Month</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Plan Name</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Amount</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Rate</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Grams</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Type</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                @for (entry of planHistory(); track entry.id) {
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm">{{ formatPaidDate(entry.paid_date) }}</td>
+                  <td class="px-4 py-3 text-sm font-medium">{{ entry.plan_name }}</td>
+                  <td class="px-4 py-3 text-sm">₹{{ formatIndianRupee(entry.monthly_amount) }}</td>
+                  <td class="px-4 py-3 text-sm">₹{{ formatIndianRupee(entry.gold_rate || 0) }}/g</td>
+                  <td class="px-4 py-3 text-sm">{{ getPlanGrams(entry).toFixed(3) }}g</td>
+                  <td class="px-4 py-3 text-sm">
+                    <span class="px-2 py-1 text-xs rounded-full uppercase" 
+                          [class.bg-yellow-100]="entry.investment_type === 'gold'"
+                          [class.text-yellow-800]="entry.investment_type === 'gold'"
+                          [class.bg-gray-100]="entry.investment_type === 'silver'"
+                          [class.text-gray-800]="entry.investment_type === 'silver'">
+                      {{ entry.investment_type }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-center">
+                    <button type="button" 
+                            (click)="deleteHistoryEntry(entry.id!)"
+                            class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                            title="Delete this entry">
+                      <i class="bx bx-trash text-lg"></i>
+                    </button>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Sliding Form -->
+  <div
+    class="fixed top-0 right-0 z-50 h-full 2xl:max-w-md w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col translate-x-full"
+    [class.translate-x-0]="showAddPlan()" [class.translate-x-full]="!showAddPlan()">
+    <!-- Form Header -->
+    <div class="flex items-center justify-between p-4 border-b bg-linear-to-r from-yellow-400 to-yellow-600">
+      <h2 class="2xl:text-lg font-semibold text-white">
+        {{ editingPlanId() ? 'Edit Investment Plan' : 'Add Investment Plan' }}
+      </h2>
+      <button class="text-2xl text-white hover:text-gray-200" (click)="closeAddPlan()">✕</button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="investmentForm" (ngSubmit)="submitInvestment()"
+      class="flex flex-col 2xl:gap-4 gap-2 p-4 overflow-y-auto flex-1 2xl:text-[15px] text-[12px]">
+      
+      <!-- Plan Type Selection -->
+      @if (!editingPlanId()) {
+      <div class="flex gap-4 mb-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" [value]="true" [(ngModel)]="isAddingNew" [ngModelOptions]="{standalone: true}"
+            (change)="onCardTypeChange()" class="cursor-pointer" />
+          <span class="text-sm font-medium">Add New Plan</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" [value]="false" [(ngModel)]="isAddingNew" [ngModelOptions]="{standalone: true}"
+            (change)="onCardTypeChange()" class="cursor-pointer" />
+          <span class="text-sm font-medium">Select Existing</span>
+        </label>
+      </div>
+      }
+
+      <!-- Existing Plan Selection -->
+      @if (!isAddingNew() && !editingPlanId()) {
+      <div>
+        <label class="text-sm font-medium">Select Existing Plan</label>
+        <select formControlName="existing_plan_id" (change)="onExistingPlanSelect($event)"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none text-gray-900">
+          <option value="">Select a plan</option>
+          @for (plan of allPlans(); track plan.plan_id) {
+          <option [value]="plan.plan_id">{{ plan.plan_name }} ({{ plan.investment_type }})</option>
+          }
+        </select>
+      </div>
+
+      <!-- Action Selection for Existing Plan -->
+      @if (selectedExistingPlan() && !editingPlanId()) {
+      <div>
+        <label class="text-sm font-medium">What would you like to do?</label>
+        <div class="flex gap-3 mt-2">
+          <button type="button" 
+                  (click)="planAction.set('')"
+                  [class]="planAction() === '' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Edit
+          </button>
+          <button type="button" 
+                  (click)="onPlanActionChange('edit')"
+                  [class]="planAction() === 'edit' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Invest
+          </button>
+          <button type="button" 
+                  (click)="onPlanActionChange('delete')"
+                  [class]="planAction() === 'delete' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Delete Plan
+          </button>
+        </div>
+        
+        @if (planAction() === '') {
+        <p class="text-xs text-gray-500 mt-2">
+          This will create a new entry for the current month with this plan's details.
+        </p>
+        } @else if (planAction() === 'edit') {
+        <p class="text-xs text-orange-600 mt-2">
+          ⚠️ This will update the plan template. Changes will not affect existing monthly entries.
+        </p>
+        } @else if (planAction() === 'delete') {
+        <p class="text-xs text-red-600 mt-2">
+          ⚠️ This will permanently delete the plan template.
+        </p>
+        }
+      </div>
+      }
+      }
+
+      <!-- Plan Name -->
+      <div>
+        <label class="text-sm font-medium">Plan Name <span class="text-red-500">*</span></label>
+        <input type="text" formControlName="plan_name" 
+          [readonly]="selectedExistingPlan() && planAction() === ''"
+          [class.bg-gray-100]="selectedExistingPlan() && planAction() === ''"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+          placeholder="e.g., Tanishq Golden Harvest, Muthoot Gold" />
+        @if (investmentForm.get('plan_name')?.invalid && investmentForm.get('plan_name')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Plan name is required</p>
+        }
+      </div>
+
+      <!-- Investment Type -->
+      <div>
+        <label class="text-sm font-medium">Investment Type <span class="text-red-500">*</span></label>
+        <select formControlName="investment_type"
+          [disabled]="!!(selectedExistingPlan() && planAction() === '')"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none">
+          <option value="gold">Gold</option>
+          <option value="silver">Silver</option>
+        </select>
+      </div>
+
+      <!-- Amount -->
+      <div>
+        <label class="text-sm font-medium">Investment Amount <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input type="text" #amountInput formControlName="monthly_amount"
+            [readonly]="selectedExistingPlan() && planAction() === ''"
+            [class.bg-gray-100]="selectedExistingPlan() && planAction() === ''"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none" placeholder="0"
+            (input)="onAmountChange($event, 'monthly_amount')" />
+        </div>
+        @if (investmentForm.get('monthly_amount')?.invalid && investmentForm.get('monthly_amount')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Amount is required</p>
+        }
+      </div>
+
+      <!-- Gold/Silver Rate -->
+      <div>
+        <label class="text-sm font-medium">{{ investmentForm.get('investment_type')?.value === 'gold' ? 'Gold' : 'Silver' }} Rate (per gram) <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input type="number" step="0.01" formControlName="gold_rate"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none" placeholder="0.00"
+            />
+        </div>
+        @if (investmentForm.get('gold_rate')?.invalid && investmentForm.get('gold_rate')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Rate is required</p>
+        }
+      </div>
+
+      <!-- Paid Date -->
+      <div>
+        <label class="text-sm font-medium">Paid Date</label>
+        <input type="date" formControlName="paid_date"
+          [readonly]="selectedExistingPlan() && planAction() === ''"
+          [class.bg-gray-100]="selectedExistingPlan() && planAction() === ''"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" />
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-auto flex gap-3 pt-4">
+        <button type="button" (click)="closeAddPlan()" class="flex-1 rounded-lg bg-gray-200 py-2 hover:bg-gray-300">
+          Cancel
+        </button>
+        <button type="submit" 
+          [class]="planAction() === 'delete' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'"
+          class="flex-1 rounded-lg text-white py-2 transition-colors">
+          @if (planAction() === 'delete') {
+            Delete Plan
+          } @else if (planAction() === 'edit') {
+            Update Plan
+          } @else if (editingPlanId()) {
+            Update Entry
+          } @else {
+            Add Plan
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

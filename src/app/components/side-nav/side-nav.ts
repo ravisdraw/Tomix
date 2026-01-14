@@ -35,18 +35,17 @@ export class SideNav implements OnInit {
       isCollapsed: false,
       items: [
         { label: 'Loans', path: 'loans', icon: 'bx bx-home-alt' },
-        { label: 'Credit Cards', path: '', icon: 'bx bx-receipt' },
-        { label: 'Subscriptions', path: '', icon: 'bx bx-credit-card' },
+        { label: 'Credit Cards', path: 'credit-cards', icon: 'bx bx-receipt' },
+        { label: 'Subscriptions', path: 'subscriptions', icon: 'bx bx-credit-card' },
       ]
     },
     'investments': {
       label: 'Investments',
       isCollapsed: true,
       items: [
-        { label: 'Gold', path: '', icon: 'bx bx-treasure-chest' },
-        { label: 'Post Office', path: '', icon: 'bx bx-bank' },
-        { label: 'Mutual Funds', path: '', icon: 'bx bx-file-report' },
-        { label: 'Stocks', path: '', icon: 'bx bx-chart-trend' },
+        { label: 'Gold & Silver', path: 'investments/gold', icon: 'bx bx-trophy' },
+        { label: 'Post Office', path: 'investments/post-office', icon: 'bx bx-envelope' },
+        { label: 'Mutual Funds', path: 'investments/mutual-funds', icon: 'bx bx-trending-up' },
       ]
     },
     'insurance': {

@@ -1,17 +1,17 @@
 <div class="block md:hidden" (click)="toggleSideNav()">
     <i class='bx bx-menu bg-amber-400 absolute left-2 top-2 p-3 rounded-md z-20'></i> 
 </div>
-<div class="h-full w-full bg-[#F7FCFC] flex flex-col relative" [ngClass]="openSideNav() ? '': 'hidden'" 
+<div class="h-full w-full bg-[#F7FCFC] flex flex-col relative overflow-y-auto" [ngClass]="openSideNav() ? '': 'hidden'" 
     style="transition: transform 0.3s ease-in-out;">
     
-    <div class="w-full flex 2xl:text-[35px] text-[25px] p-2 md:p-5 justify-around place-items-center">
+    <div class="w-full flex 2xl:text-[35px] text-[25px] p-2 md:p-5 justify-around place-items-center flex-shrink-0">
         <!-- <div></div> -->
         <div class="font-medium md:font-semibold ">Tomix</div>
     </div>
 
     <!--Default Menu-->
 
-    <div class="w-full flex flex-col place-items-center justify-center md:p-3 2xl:px-12 px-3 md:px-8 font-medium gap-1">
+    <div class="w-full flex flex-col place-items-center justify-center md:p-3 2xl:px-12 px-3 md:px-8 font-medium gap-1 flex-shrink-0">
         <div class="flex w-full hover:bg-[#08b78352] justify-self-start gap-2 md:gap-5 p-2 rounded-[10px] place-items-center cursor-pointer"
             [ngStyle]="{'background-color': selectedNavItem() === 'dashboard' ? '#08b78352' : ''}"
             (click)="navigateTo('dashboard'); onWindowResize()">
@@ -58,7 +58,7 @@
     }
 
     <!-- User Profile Section -->
-    <div class="w-full flex flex-col place-items-center justify-center p-4 gap-3 border-t border-[#E0E0E0] mt-auto">
+    <div class="w-full flex flex-col place-items-center justify-center p-4 gap-3 border-t border-[#E0E0E0] mt-auto flex-shrink-0">
         <div
             class="2xl:w-16 2xl:h-16 w-12 h-12 rounded-full bg-[#E0E0E0] overflow-hidden flex place-items-center justify-center">
             @if (userAvatar()) {

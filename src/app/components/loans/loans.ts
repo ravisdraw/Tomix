@@ -8,7 +8,7 @@ import {
   ChangeDetectionStrategy,
   effect,
 } from '@angular/core';
-import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { LoansStore } from '../../store/loans.store';
 import { SupabaseService } from '../../services/supabase.service';
@@ -21,16 +21,36 @@ interface Loan {
   id: string | number;
   loanName: string;
   emoji: string;
-  amount: number;
+  monthlyEMI: number;  // Changed from amount to monthlyEMI
   interest: number;
-  tenure: number;
+  totalTenure: number;  // Total tenure in months
+  paidMonths: number;   // Months already paid
   monthlyDueDate: number;
+  // Calculated fields
+  totalLoanAmount?: number;
+  remainingAmount?: number;
+  remainingMonths?: number;
+  totalInterest?: number;
+}
+
+interface EMIScheduleRow {
+  monthNumber: number;
+  monthYear: string;
+  openingBalance: number;
+  emi: number;
+  interest: number;
+  principal: number;
+  extraPayment: number;
+  totalPrincipal: number;
+  closingBalance: number;
+  isPaid: boolean;
 }
 
 @Component({
   selector: 'app-loans',
   imports: [
     ReactiveFormsModule,
+    FormsModule,
     CommonModule,
     EmojiPicker,
   ],
@@ -47,6 +67,11 @@ export class Loans implements OnInit {
   isCheckingData = signal(true);
   loanForm: any;
   userId = signal<string | null>(null);
+  
+  // EMI Schedule signals
+  showSchedule = signal(false);
+  selectedLoanForSchedule = signal<Loan | null>(null);
+  emiSchedule = signal<EMIScheduleRow[]>([]);
 
   loansStore = inject(LoansStore);
   supabaseService = inject(SupabaseService);
@@ -59,7 +84,7 @@ export class Loans implements OnInit {
 
   totalLoanAmount = computed(() => {
     return this.loanItems().reduce(
-      (sum: number, item: Loan) => sum + (item.amount || 0),
+      (sum: number, item: Loan) => sum + (this.calculateTotalLoanAmount(item.monthlyEMI, item.interest, item.totalTenure) || 0),
       0
     );
   });
@@ -76,9 +101,10 @@ export class Loans implements OnInit {
     this.loanForm = this.fb.group({
       loanName: ['', Validators.required],
       emoji: ['💰'],
-      amount: [0, [Validators.required, Validators.min(1)]],
+      monthlyEMI: [0, [Validators.required, Validators.min(1)]],
       interest: [0, [Validators.required, Validators.min(0)]],
-      tenure: [0, [Validators.required, Validators.min(1)]],
+      totalTenure: [0, [Validators.required, Validators.min(1)]],
+      paidMonths: [0, [Validators.required, Validators.min(0)]],
       monthlyDueDate: [1, [Validators.required, Validators.min(1), Validators.max(31)]],
     });
   }
@@ -133,9 +159,10 @@ export class Loans implements OnInit {
     this.loanForm.reset({
       loanName: '',
       emoji: '💰',
-      amount: 0,
+      monthlyEMI: 0,
       interest: 0,
-      tenure: 0,
+      totalTenure: 0,
+      paidMonths: 0,
       monthlyDueDate: 1,
     });
     this.showAddLoan.set(true);
@@ -154,9 +181,10 @@ export class Loans implements OnInit {
     this.loanForm.patchValue({
       loanName: loan.loanName,
       emoji: loan.emoji,
-      amount: loan.amount,
+      monthlyEMI: loan.monthlyEMI,
       interest: loan.interest,
-      tenure: loan.tenure,
+      totalTenure: loan.totalTenure,
+      paidMonths: loan.paidMonths,
       monthlyDueDate: loan.monthlyDueDate,
     });
     this.showAddLoan.set(true);
@@ -214,10 +242,194 @@ export class Loans implements OnInit {
     this.loanForm.reset();
   }
 
+  // EMI Schedule Methods
+  toggleEMISchedule(loan: Loan) {
+    if (this.showSchedule() && this.selectedLoanForSchedule()?.id === loan.id) {
+      // If clicking the same loan's info icon, close it
+      this.closeEMISchedule();
+    } else {
+      // Otherwise, show the schedule for this loan
+      this.selectedLoanForSchedule.set(loan);
+      this.generateEMISchedule(loan);
+      this.showSchedule.set(true);
+    }
+  }
+
+  closeEMISchedule() {
+    this.showSchedule.set(false);
+    this.selectedLoanForSchedule.set(null);
+    this.emiSchedule.set([]);
+  }
+
+  generateEMISchedule(loan: Loan) {
+    const schedule: EMIScheduleRow[] = [];
+    const monthlyRate = loan.interest / 12 / 100;
+    const totalLoanAmount = this.calculateTotalLoanAmount(loan.monthlyEMI, loan.interest, loan.totalTenure);
+    let balance = this.calculateRemainingAmount(loan.monthlyEMI, loan.interest, loan.totalTenure - loan.paidMonths);
+    
+    const currentDate = new Date();
+    const startMonth = loan.paidMonths;
+    const remainingMonths = loan.totalTenure - loan.paidMonths;
+
+    for (let i = 0; i < remainingMonths; i++) {
+      const monthDate = new Date(currentDate);
+      monthDate.setMonth(currentDate.getMonth() + i);
+      
+      // Calculate interest for this month
+      const interest = Math.round(balance * monthlyRate);
+      
+      // Calculate principal portion from EMI (EMI - Interest)
+      const principal = Math.round(loan.monthlyEMI - interest);
+      
+      // Extra payment defaults to 0 but can be edited by user
+      const extraPayment = 0;
+      
+      // Total principal = regular principal + any extra payment
+      const totalPrincipal = principal + extraPayment;
+      
+      // Closing balance = opening balance minus total principal paid
+      // Note: Interest doesn't reduce the balance, only principal payments do
+      const closingBalance = Math.max(0, Math.round(balance - totalPrincipal));
+
+      schedule.push({
+        monthNumber: startMonth + i + 1,
+        monthYear: monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        openingBalance: Math.round(balance),
+        emi: loan.monthlyEMI,
+        interest: interest,
+        principal: principal,
+        extraPayment: extraPayment,
+        totalPrincipal: totalPrincipal,
+        closingBalance: closingBalance,
+        isPaid: false
+      });
+
+      balance = closingBalance;
+      
+      // Stop if balance becomes 0
+      if (balance <= 0) break;
+    }
+
+    this.emiSchedule.set(schedule);
+  }
+
+  recalculateSchedule(fromIndex: number) {
+    const schedule = [...this.emiSchedule()];
+    const loan = this.selectedLoanForSchedule();
+    if (!loan) return;
+
+    const monthlyRate = loan.interest / 12 / 100;
+
+    // Recalculate from the changed row onwards
+    for (let i = fromIndex; i < schedule.length; i++) {
+      const row = schedule[i];
+      
+      if (i === fromIndex) {
+        // For the changed row, recalculate total principal and closing balance
+        row.totalPrincipal = row.principal + (row.extraPayment || 0);
+        row.closingBalance = Math.max(0, Math.round(row.openingBalance - row.totalPrincipal));
+      } else {
+        // For subsequent rows, update opening balance and recalculate everything
+        row.openingBalance = schedule[i - 1].closingBalance;
+        
+        if (row.openingBalance <= 0) {
+          // Loan is fully paid, zero out remaining rows
+          row.interest = 0;
+          row.principal = 0;
+          row.emi = 0;
+          row.extraPayment = 0;
+          row.totalPrincipal = 0;
+          row.closingBalance = 0;
+        } else {
+          row.interest = Math.round(row.openingBalance * monthlyRate);
+          row.principal = Math.round(loan.monthlyEMI - row.interest);
+          row.totalPrincipal = row.principal + (row.extraPayment || 0);
+          row.closingBalance = Math.max(0, Math.round(row.openingBalance - row.totalPrincipal));
+        }
+      }
+    }
+
+    this.emiSchedule.set(schedule);
+  }
+
+  // Totals for EMI Schedule
+  getTotalEMI(): number {
+    return this.emiSchedule().reduce((sum, row) => sum + row.emi, 0);
+  }
+
+  getTotalInterestPaid(): number {
+    return this.emiSchedule().reduce((sum, row) => sum + row.interest, 0);
+  }
+
+  getTotalPrincipalPaid(): number {
+    return this.emiSchedule().reduce((sum, row) => sum + row.principal, 0);
+  }
+
+  getTotalExtraPayment(): number {
+    return this.emiSchedule().reduce((sum, row) => sum + (row.extraPayment || 0), 0);
+  }
+
+  getTotalPrincipalWithExtra(): number {
+    return this.emiSchedule().reduce((sum, row) => sum + row.totalPrincipal, 0);
+  }
+
   // Format number as Indian Rupee style (1,00,000)
   formatIndianRupee(amount: number): string {
     if (!amount) return '0';
     return amount.toLocaleString('en-IN');
+  }
+
+  // Calculate total loan amount (Principal) from EMI, interest rate, and tenure
+  calculateTotalLoanAmount(emi: number, annualRate: number, tenureMonths: number): number {
+    if (!emi || !tenureMonths || emi <= 0 || tenureMonths <= 0) {
+      return 0;
+    }
+    
+    // If interest rate is 0, principal = EMI * tenure
+    if (annualRate === 0) {
+      return emi * tenureMonths;
+    }
+    
+    // Monthly interest rate
+    const monthlyRate = annualRate / 12 / 100;
+    
+    // Reverse EMI Formula: P = EMI × [(1+R)^N-1] / [R × (1+R)^N]
+    const principal = (emi * (Math.pow(1 + monthlyRate, tenureMonths) - 1)) / 
+                     (monthlyRate * Math.pow(1 + monthlyRate, tenureMonths));
+    
+    return Math.round(principal);
+  }
+
+  // Calculate remaining amount
+  calculateRemainingAmount(emi: number, annualRate: number, remainingMonths: number): number {
+    return this.calculateTotalLoanAmount(emi, annualRate, remainingMonths);
+  }
+
+  // Calculate total interest paid
+  calculateTotalInterest(emi: number, tenureMonths: number, principal: number): number {
+    const totalPaid = emi * tenureMonths;
+    return Math.round(totalPaid - principal);
+  }
+
+  // Calculate monthly EMI (kept for backward compatibility)
+  calculateMonthlyEMI(principal: number, annualRate: number, tenureMonths: number): number {
+    if (!principal || !tenureMonths || principal <= 0 || tenureMonths <= 0) {
+      return 0;
+    }
+    
+    // If interest rate is 0, EMI is simply principal divided by tenure
+    if (annualRate === 0) {
+      return principal / tenureMonths;
+    }
+    
+    // Monthly interest rate
+    const monthlyRate = annualRate / 12 / 100;
+    
+    // EMI Formula: [P x R x (1+R)^N] / [(1+R)^N-1]
+    const emi = (principal * monthlyRate * Math.pow(1 + monthlyRate, tenureMonths)) / 
+                (Math.pow(1 + monthlyRate, tenureMonths) - 1);
+    
+    return Math.round(emi);
   }
 
   getTotalInterest(): string {
@@ -230,7 +442,7 @@ export class Loans implements OnInit {
 
   getTotalTenure(): number {
     return this.loanItems().reduce(
-      (sum: number, item: Loan) => sum + (item.tenure || 0),
+      (sum: number, item: Loan) => sum + (item.totalTenure || 0),
       0
     );
   }

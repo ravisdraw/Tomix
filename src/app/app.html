@@ -1,11 +1,11 @@
-<div class="w-lvw md:h-lvh font-poppins flex bg-[#E7F2F3] relative">
+<div class="w-full h-full font-poppins flex bg-[#E7F2F3] relative overflow-hidden">
     <!--SideNav-->
     @if(!isLoginPage()) {
-        <app-side-nav  class="md:h-full h-screen md:w-[20%]"></app-side-nav>
+        <app-side-nav  class="h-full md:w-[20%] flex-shrink-0"></app-side-nav>
     }
 
     <!--Main Screen-->
-    <div [class]="isLoginPage() ? 'h-full w-full' : 'h-full w-full' + ' 2xl:w-[80%] md:w-[80%] p-5 py-10 md:p-0 md:py-0' " >
+    <div [class]="isLoginPage() ? 'h-full w-full overflow-auto' : 'h-full w-full 2xl:w-[80%] md:w-[80%] p-5 py-10 md:p-0 md:py-0 overflow-auto'" >
         <router-outlet></router-outlet>
     </div>
     <!-- <app-dashboard ></app-dashboard> -->

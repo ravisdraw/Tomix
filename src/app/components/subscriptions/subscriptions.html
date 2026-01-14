@@ -1,0 +1,323 @@
+<div class="w-full h-full flex flex-col 2xl:px-8 md:px-5">
+  <!--Header-->
+  <div class="w-full 2xl:h-[15%] flex place-items-center justify-between">
+    <div class="font-medium 2xl:text-[25px] text-[22px]">Subscriptions</div>
+    <div class="flex gap-3 justify-center place-items-center">
+      <div class="flex flex-col text-right">
+        <div class="font-semibold 2xl:text-[20px] text-[16px] text-[#FC3134]">
+          Rs. {{ formatIndianRupee(totalMonthlyAmount()) }}
+        </div>
+        <div class="text-[10px] text-gray-500 font-medium">Monthly Total</div>
+      </div>
+      <div class="p-3 justify-center place-items-center">
+        <i class="bx bx-plus rounded-[10px] bg-[#08B783] p-3 2xl:text-[20px] text-[16px] font-bold"
+          style="color: #ffffff" (click)="openAddSubscription()"></i>
+      </div>
+    </div>
+  </div>
+
+  <!--Content-->
+  <div class="w-full h-[85%] flex pb-5 2xl:gap-5 gap-2 flex-col md:flex-row">
+    <!--Active Subscriptions-->
+    <div class="md:w-[60%] h-full flex flex-col 2xl:gap-5 gap-2">
+      <div class="w-full rounded-[10px] bg-[#F7FCFC] h-full flex flex-col">
+        <div class="w-full h-[15%] flex place-items-center justify-between p-5 border-b border-b-gray-200">
+          <div class="flex flex-col gap-1">
+            <div class="font-medium 2xl:text-[20px] text-[16px]">Active Subscriptions</div>
+            <div class="text-[10px] text-gray-500 font-medium">{{ activeSubscriptions().length }} active subscriptions
+            </div>
+          </div>
+        </div>
+
+        <div class="w-full h-[85%] flex flex-col overflow-y-auto">
+          @if (isLoading()) {
+          <ng-container *ngTemplateOutlet="skeletonLoader"></ng-container>
+          } @else if (activeSubscriptions().length === 0) {
+          <div class="w-full flex place-items-center h-full justify-center text-gray-400">
+            No subscriptions added yet
+          </div>
+          } @else { 
+            @for (sub of activeSubscriptions(); track sub.id) {
+          <div class="w-full relative px-5 2xl:py-4 py-2 cursor-pointer border-b border-b-gray-100"
+            (click)="toggleSubscriptionSelection(sub.id!)">
+            <div class="w-full flex place-items-start justify-between"
+              [class.opacity-40]="selectedSubscriptionId() === sub.id">
+              <div class="flex gap-5 place-items-center flex-1">
+                <div class="p-3 2xl:text-[24px] text-[20px] bg-gray-200 rounded-full">{{ sub.emoji || '💳' }}</div>
+                <div class="flex flex-col gap-1">
+                  <div class="font-medium 2xl:text-[18px] text-[14px]">{{ sub.name }}</div>
+                  @if (sub.plan_details) {
+                  <div class="text-[10px] text-gray-500 font-medium">{{ sub.plan_details }}</div>
+                  }
+                  <div class="text-[10px] text-gray-500 font-medium">
+                    {{ getBillingCycleText(sub.billing_cycle || 'monthly') }} - Day {{ sub.billing_date }}
+                  </div>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1 items-end">
+                <div class="font-semibold 2xl:text-[18px] text-[14px] text-[#FC3134]">
+                  Rs. {{ formatIndianRupee(sub.billing_amount) }}
+                </div>
+                <div class="text-[11px] font-medium"
+                  [class]="calculateDaysLeft(sub.billing_date) <= 3 ? 'text-red-500' : 'text-[#08B783]'">
+                  {{ getDaysLeftText(calculateDaysLeft(sub.billing_date)) }}
+                </div>
+                <div class="text-[10px] text-gray-500 font-medium">
+                  Next: {{ getNextBillingDate(sub.billing_date) }}
+                </div>
+                @if (isExpiringSoon(sub.end_date)) {
+                <div class="text-[10px] text-orange-500 font-semibold">
+                  Expiring Soon!
+                </div>
+                }
+              </div>
+            </div>
+            @if (selectedSubscriptionId() === sub.id) {
+            <div class="absolute inset-0 flex items-center justify-center gap-4">
+              <i class="bx bx-edit-alt bx-lg" style="color: #0f1f3c; font-size: 28px; cursor: pointer"
+                (click)="editSubscription(sub); $event.stopPropagation()"></i>
+              <i class="bx bx-trash-alt bx-lg" style="color: #0f1f3c; font-size: 28px; cursor: pointer"
+                (click)="deleteSubscription(sub.id!); $event.stopPropagation()"></i>
+            </div>
+            }
+          </div>
+          } }
+        </div>
+      </div>
+    </div>
+
+    <!--Upcoming & Summary-->
+    <div class="md:w-[40%] h-full flex flex-col 2xl:gap-5 gap-2">
+      <!--Upcoming Billing-->
+      <div class="w-full rounded-[10px] bg-[#F7FCFC] h-[50%] flex flex-col">
+        <div class="w-full h-[20%] flex place-items-center justify-between p-5 border-b border-b-gray-200">
+          <div class="flex flex-col gap-1">
+            <div class="font-medium 2xl:text-[18px] text-[16px]">Upcoming Billing</div>
+            <div class="text-[10px] text-gray-500 font-medium">Next 7 days</div>
+          </div>
+        </div>
+
+        <div class="w-full h-[80%] flex flex-col overflow-y-auto">
+          @if (isLoading()) {
+          <ng-container *ngTemplateOutlet="skeletonLoader"></ng-container>
+          } @else if (upcomingSubscriptions().length === 0) {
+          <div class="w-full flex place-items-center h-full justify-center text-gray-400 text-sm">
+            No upcoming bills in next 7 days
+          </div>
+          } @else { @for (sub of upcomingSubscriptions(); track sub.id) {
+          <div class="w-full px-5 2xl:py-3 py-2 border-b border-b-gray-100">
+            <div class="w-full flex place-items-start justify-between">
+              <div class="flex gap-3 place-items-center flex-1">
+                <div class="p-2 2xl:text-[20px] text-[18px] bg-gray-200 rounded-full">{{ sub.emoji || '💳' }}</div>
+                <div class="flex flex-col gap-1">
+                  <div class="font-medium 2xl:text-[16px] text-[13px]">{{ sub.name }}</div>
+                  <div class="text-[10px] text-gray-500 font-medium">
+                    {{ getNextBillingDate(sub.billing_date) }}
+                  </div>
+                </div>
+              </div>
+              <div class="flex flex-col gap-1 items-end">
+                <div class="font-semibold 2xl:text-[16px] text-[13px] text-[#FC3134]">
+                  Rs. {{ formatIndianRupee(sub.billing_amount) }}
+                </div>
+                <div class="text-[11px] font-medium"
+                  [class]="calculateDaysLeft(sub.billing_date) <= 3 ? 'text-red-500' : 'text-orange-500'">
+                  {{ getDaysLeftText(calculateDaysLeft(sub.billing_date)) }}
+                </div>
+              </div>
+            </div>
+          </div>
+          } }
+        </div>
+      </div>
+
+      <!--Summary-->
+      <div class="w-full rounded-[10px] bg-[#F7FCFC] h-[50%] flex flex-col 2xl:p-5 p-3">
+        <div class="font-medium 2xl:text-[18px] text-[14px] 2xl:mb-4 mb-2">Summary</div>
+
+        <div class="flex flex-col 2xl:gap-3 gap-2 overflow-y-auto">
+          <div class="flex justify-between place-items-center 2xl:p-3 p-2 bg-white rounded-lg">
+            <div class="flex flex-col gap-1">
+              <div class="2xl:text-[12px] text-[10px] text-gray-500 font-medium">Total Active</div>
+              <div class="font-semibold 2xl:text-[22px] text-[18px]">{{ activeSubscriptions().length }}</div>
+            </div>
+            <div class="2xl:p-3 p-2 bg-blue-100 rounded-full">
+              <i class="bx bx-list-ul 2xl:text-[20px] text-[16px]" style="color: #3b82f6"></i>
+            </div>
+          </div>
+
+          <div class="flex justify-between place-items-center 2xl:p-3 p-2 bg-white rounded-lg">
+            <div class="flex flex-col gap-1">
+              <div class="2xl:text-[12px] text-[10px] text-gray-500 font-medium">Monthly Cost</div>
+              <div class="font-semibold 2xl:text-[22px] text-[18px] text-[#FC3134]">
+                Rs. {{ formatIndianRupee(totalMonthlyAmount()) }}
+              </div>
+            </div>
+            <div class="2xl:p-3 p-2 bg-red-100 rounded-full">
+              <i class="bx bx-wallet 2xl:text-[20px] text-[16px]" style="color: #ef4444"></i>
+            </div>
+          </div>
+
+          <div class="flex justify-between place-items-center 2xl:p-3 p-2 bg-white rounded-lg">
+            <div class="flex flex-col gap-1">
+              <div class="2xl:text-[12px] text-[10px] text-gray-500 font-medium">Yearly Cost</div>
+              <div class="font-semibold 2xl:text-[18px] text-[16px] text-gray-700">
+                Rs. {{ formatIndianRupee(totalMonthlyAmount() * 12) }}
+              </div>
+            </div>
+            <div class="2xl:p-3 p-2 bg-gray-200 rounded-full">
+              <i class="bx bx-calendar 2xl:text-[20px] text-[16px]" style="color: #6b7280"></i>
+            </div>
+          </div>
+
+          <div class="flex justify-between place-items-center 2xl:p-3 p-2 bg-white rounded-lg">
+            <div class="flex flex-col gap-1">
+              <div class="2xl:text-[12px] text-[10px] text-gray-500 font-medium">Upcoming (7 days)</div>
+              <div class="font-semibold 2xl:text-[18px] text-[16px] text-orange-500">
+                {{ upcomingSubscriptions().length }}
+              </div>
+            </div>
+            <div class="2xl:p-3 p-2 bg-orange-100 rounded-full">
+              <i class="bx bx-bell 2xl:text-[20px] text-[16px]" style="color: #f97316"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sliding Form Panel -->
+  <div
+    class="fixed top-0 right-0 z-50 h-full 2xl:max-w-md w-sm bg-white transform transition-transform duration-300 ease-in-out flex flex-col translate-x-full"
+    [class.translate-x-0]="showAddSubscription()" [class.translate-x-full]="!showAddSubscription()">
+    <!-- Form Header -->
+    <div class="flex items-center justify-between p-4 border-b">
+      <h2 class="2xl:text-lg font-semibold">
+        {{ editingSubscriptionId() ? 'Edit Subscription' : 'Add Subscription' }}
+      </h2>
+      <button class="text-2xl text-gray-500" (click)="closeAddSubscription()">✕</button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="subscriptionForm" (ngSubmit)="submitSubscription()"
+      class="flex flex-col 2xl:gap-4 gap-2 p-4 overflow-y-auto flex-1 2xl:text-[15px] text-[12px]">
+      <!-- Name + Emoji -->
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="text-sm font-medium">Subscription Name <span class="text-red-500">*</span></label>
+          <input formControlName="name" class="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+            placeholder="e.g., Netflix, Airtel, Jio" />
+          @if (subscriptionForm.get('name')?.invalid && subscriptionForm.get('name')?.touched) {
+          <p class="text-red-500 text-xs mt-1">Subscription name is required</p>
+          }
+        </div>
+
+        <div class="w-20">
+          <label class="text-sm font-medium">Emoji</label>
+          <app-emoji-picker (emojiSelected)="onEmojiSelected($event)"></app-emoji-picker>
+        </div>
+      </div>
+
+      <!-- Plan Details -->
+      <div>
+        <label class="text-sm font-medium">Plan Details</label>
+        <input formControlName="plan_details" class="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+          placeholder="e.g., Premium Plan, Unlimited" />
+      </div>
+
+      <!-- Amount -->
+      <div>
+        <label class="text-sm font-medium">Billing Amount <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input type="text" formControlName="billing_amount"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none" placeholder="0"
+            (input)="onAmountChange($event)" />
+        </div>
+        @if (subscriptionForm.get('billing_amount')?.invalid && subscriptionForm.get('billing_amount')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Amount is required and must be greater than 0</p>
+        }
+      </div>
+
+      <!-- Billing Date -->
+      <div>
+        <label class="text-sm font-medium">Billing Date <span class="text-red-500">*</span></label>
+        <input type="number" formControlName="billing_date"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" placeholder="Day of month (1-31)" min="1"
+          max="31" />
+        @if (subscriptionForm.get('billing_date')?.invalid && subscriptionForm.get('billing_date')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Billing date must be between 1 and 31</p>
+        }
+      </div>
+
+      <!-- Billing Cycle -->
+      <div>
+        <label class="text-sm font-medium">Billing Cycle <span class="text-red-500">*</span></label>
+        <select formControlName="billing_cycle" class="mt-1 w-full rounded-lg border px-3 py-2 outline-none text-gray-900">
+          @for (cycle of billingCycles; track cycle) {
+          <option [value]="cycle">{{ getBillingCycleText(cycle) }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Start Date -->
+      <div>
+        <label class="text-sm font-medium">Start Date <span class="text-red-500">*</span></label>
+        <input type="date" formControlName="start_date" class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" />
+      </div>
+
+      <!-- End Date -->
+      <div>
+        <label class="text-sm font-medium">End Date (Optional)</label>
+        <input type="date" formControlName="end_date" class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" />
+        <p class="text-xs text-gray-500 mt-1">Leave empty for ongoing subscriptions</p>
+      </div>
+
+      <!-- Active Status -->
+      <div class="flex items-center gap-3 pt-2">
+        <input type="checkbox" formControlName="is_active" id="is_active" class="w-4 h-4 cursor-pointer" />
+        <label for="is_active" class="text-sm font-medium cursor-pointer">
+          Active Subscription
+        </label>
+      </div>
+
+      <!-- Notes -->
+      <div>
+        <label class="text-sm font-medium">Notes (Optional)</label>
+        <textarea formControlName="notes" class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" rows="3"
+          placeholder="Add any additional notes..."></textarea>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="flex gap-3 pt-4 border-t">
+        <button type="button" (click)="closeAddSubscription()"
+          class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+          Cancel
+        </button>
+        <button type="submit" [disabled]="subscriptionForm.invalid"
+          class="flex-1 bg-[#08B783] text-white py-3 rounded-lg font-medium hover:bg-[#06a071] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ editingSubscriptionId() ? 'Update' : 'Add' }} Subscription
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Skeleton Loader Template -->
+<ng-template #skeletonLoader>
+  <div class="w-full flex flex-col">
+    @for (i of [1,2,3]; track i) {
+    <div class="skeleton-item flex gap-5">
+      <div class="skeleton skeleton-avatar"></div>
+      <div class="flex-1">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-subtitle"></div>
+      </div>
+      <div class="flex flex-col items-end gap-2">
+        <div class="skeleton skeleton-amount"></div>
+        <div class="skeleton skeleton-text"></div>
+      </div>
+    </div>
+    }
+  </div>
+</ng-template>

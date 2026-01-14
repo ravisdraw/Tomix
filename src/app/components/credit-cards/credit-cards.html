@@ -1,0 +1,425 @@
+<div class="w-full h-full flex flex-col 2xl:px-8 md:px-5">
+  <!-- Header -->
+  <div class="w-full 2xl:h-[15%] flex place-items-center justify-between">
+    <div class="font-medium 2xl:text-[25px] text-[22px]">Credit Cards</div>
+    <div class="flex gap-3 justify-center place-items-center">
+      <div class="p-3 justify-center place-items-center">
+        <i class="bx bx-plus rounded-[10px] bg-[#08B783] p-3 2xl:text-[20px] text-[16px] font-bold"
+          style="color: #ffffff" (click)="openAddCard()"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+
+  <div class="w-full h-[85%] flex pb-5 2xl:gap-5 gap-2 flex-col">
+    <!-- Summary Cards -->
+    <div class="w-full grid-cols-1 md:grid-cols-4 gap-4 hidden">
+      <!-- Total Limit -->
+      <div class="rounded-[10px] bg-[#F7FCFC] p-5 flex flex-col gap-2">
+        <div class="text-[12px] text-gray-500 font-medium">Total Credit Limit</div>
+        <div class="font-semibold 2xl:text-[22px] text-[18px] text-blue-600">
+          ₹ {{ formatIndianRupee(totalLimit()) }}
+        </div>
+      </div>
+
+      <!-- Total Utilized -->
+      <div class="rounded-[10px] bg-[#F7FCFC] p-5 flex flex-col gap-2">
+        <div class="text-[12px] text-gray-500 font-medium">Total Utilized</div>
+        <div class="font-semibold 2xl:text-[22px] text-[18px] text-orange-600">
+          ₹ {{ formatIndianRupee(totalUtilized()) }}
+        </div>
+      </div>
+
+      <!-- Available Credit -->
+      <div class="rounded-[10px] bg-[#F7FCFC] p-5 flex flex-col gap-2">
+        <div class="text-[12px] text-gray-500 font-medium">Available Credit</div>
+        <div class="font-semibold 2xl:text-[22px] text-[18px] text-green-600">
+          ₹ {{ formatIndianRupee(availableCredit()) }}
+        </div>
+      </div>
+
+      <!-- Total Due -->
+      <div class="rounded-[10px] bg-[#F7FCFC] p-5 flex flex-col gap-2">
+        <div class="text-[12px] text-gray-500 font-medium">Total Due Amount</div>
+        <div class="font-semibold 2xl:text-[22px] text-[18px] text-red-600">
+          ₹ {{ formatIndianRupee(totalDue()) }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Credit Cards Grid -->
+    <div class="w-full flex-1 rounded-[10px] bg-[#F7FCFC] p-5 overflow-hidden">
+      <div class="w-full h-full flex flex-col">
+        <div class="font-medium 2xl:text-[20px] text-[16px] mb-4 shrink-0">Your Credit Cards</div>
+        
+        <div class="flex-1 overflow-y-auto min-h-0">
+          @if (isCheckingData()) {
+          <!-- Skeleton Loader -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (item of [1, 2, 3]; track $index) {
+            <div class="skeleton-card">
+              <div class="skeleton skeleton-card-content"></div>
+            </div>
+            }
+          </div>
+          } @else if (currentMonthCards().length === 0) {
+          <div class="w-full flex items-center justify-center text-gray-400 h-full">
+            No credit cards added for this month
+          </div>
+          } @else {
+          <!-- Credit Cards Display -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (card of currentMonthCards(); track card.id; let idx = $index) {
+            <div class="card-container" (click)="toggleCardFlip(card.id!)">
+              <div class="credit-card" [class.flipped]="isCardFlipped(card.id!)">
+                <!-- Front of Card -->
+                <div class="card-face card-front" [style.background]="getCardGradient(idx)">
+                  <div class="card-header">
+                    <div class="card-chip"></div>
+                    <div class="card-type">Credit Card</div>
+                  </div>
+                  
+                  <div class="card-number">
+                    {{ getMaskedCardNumber(card.last_four_digits) }}
+                  </div>
+                  
+                  <div class="card-info">
+                    <div>
+                      <div class="card-label">Card Holder</div>
+                      <div class="card-value">{{ card.card_name }}</div>
+                    </div>
+                    <div>
+                      <div class="card-label">Due Date</div>
+                      <div class="card-value">{{ card.due_date }}</div>
+                    </div>
+                  </div>
+
+                  <!-- Action Buttons (only show when selected) -->
+                  <div class="card-actions" *ngIf="selectedCardId() === card.id" (click)="$event.stopPropagation()">
+                    <i class="bx bx-edit-alt" (click)="editCard(card); $event.stopPropagation()"></i>
+                    <i class="bx bx-trash-alt" (click)="deleteCard(card.id!); $event.stopPropagation()"></i>
+                  </div>
+                </div>
+
+                <!-- Back of Card -->
+                <div class="card-face card-back" [style.background]="getCardGradient(idx)">
+                  <!-- <div class="magnetic-strip"></div> -->
+                                    <!-- Info Icon -->
+                  <!-- Info Icon -->
+                  <button type="button" 
+                          (click)="toggleCardHistory(card, $event); $event.stopPropagation()"
+                          class="absolute bottom-3 right-4 bg-white/20 backdrop-blur-md hover:bg-white/30 rounded-full p-1 transition-all z-10 cursor-pointer"
+                          title="View card history"
+                          aria-label="View card history">
+                    <i class="bx bx-info-circle text-white text-xl"></i>
+                  </button>
+                                    <div class="card-details">
+                    <div class="detail-row">
+                      <span class="detail-label">Credit Limit:</span>
+                      <span class="detail-value">₹ {{ formatIndianRupee(card.card_limit) }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Utilized:</span>
+                      <span class="detail-value">₹ {{ formatIndianRupee(card.utilized_amount) }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Available:</span>
+                      <span class="detail-value text-green-300">₹ {{ formatIndianRupee(card.card_limit - card.utilized_amount) }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Due Amount:</span>
+                      <span class="detail-value text-red-300">₹ {{ formatIndianRupee(card.due_amount) }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Billing Cycle:</span>
+                      <span class="detail-value">{{ card.billing_cycle_day }}th of month</span>
+                    </div>
+                  </div>
+
+                  <!-- Utilization Bar -->
+                  <!-- <div class="utilization-container">
+                    <div class="utilization-label">Utilization: {{ ((card.utilized_amount / card.card_limit) * 100).toFixed(0) }}%</div>
+                    <div class="utilization-bar">
+                      <div class="utilization-fill" 
+                           [style.width.%]="(card.utilized_amount / card.card_limit) * 100"
+                           [class.high-utilization]="(card.utilized_amount / card.card_limit) > 0.7"></div>
+                    </div>
+                  </div> -->
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+          }
+        </div>
+
+        <!-- Card History Table -->
+        @if (showHistoryForCard()) {
+        <div class="mt-6 border-t pt-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-medium 2xl:text-[18px] text-[16px]">Card Usage History</h3>
+            <button type="button" 
+                    (click)="showHistoryForCard.set(null); cardHistory.set([])"
+                    class="text-gray-500 hover:text-gray-700">
+              <i class="bx bx-x text-2xl"></i>
+            </button>
+          </div>
+
+          @if (isLoadingHistory()) {
+          <div class="text-center text-gray-400 py-8">
+            Loading history...
+          </div>
+          } @else if (cardHistory().length === 0) {
+          <div class="text-center text-gray-400 py-8">
+            No history found for this card
+          </div>
+          } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Month/Year</th>
+                  <th class="px-4 py-3 text-right text-sm font-medium text-gray-700">Credit Limit</th>
+                  <th class="px-4 py-3 text-right text-sm font-medium text-gray-700">Utilized Amount</th>
+                  <th class="px-4 py-3 text-right text-sm font-medium text-gray-700">Available</th>
+                  <th class="px-4 py-3 text-right text-sm font-medium text-gray-700">Due Amount</th>
+                  <th class="px-4 py-3 text-center text-sm font-medium text-gray-700">Due Date</th>
+                  <th class="px-4 py-3 text-center text-sm font-medium text-gray-700">Utilization %</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                @for (entry of cardHistory(); track entry.id) {
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ entry.month_year }}</td>
+                  <td class="px-4 py-3 text-sm text-right text-gray-700">₹ {{ formatIndianRupee(entry.card_limit) }}</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-orange-600">₹ {{ formatIndianRupee(entry.utilized_amount) }}</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-green-600">₹ {{ formatIndianRupee(entry.card_limit - entry.utilized_amount) }}</td>
+                  <td class="px-4 py-3 text-sm text-right font-medium text-red-600">₹ {{ formatIndianRupee(entry.due_amount) }}</td>
+                  <td class="px-4 py-3 text-sm text-center text-gray-700">{{ entry.due_date }}</td>
+                  <td class="px-4 py-3 text-sm text-center">
+                    <span [class]="(entry.utilized_amount / entry.card_limit) > 0.7 ? 'text-red-600 font-semibold' : 'text-gray-700'">
+                      {{ ((entry.utilized_amount / entry.card_limit) * 100).toFixed(1) }}%
+                    </span>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Sliding Form -->
+  <div
+    class="fixed top-0 right-0 z-50 h-full 2xl:max-w-md w-sm bg-white transform transition-transform duration-300 ease-in-out flex flex-col translate-x-full"
+    [class.translate-x-0]="showAddCard()" [class.translate-x-full]="!showAddCard()">
+    <!-- Form Header -->
+    <div class="flex items-center justify-between p-4 border-b">
+      <h2 class="2xl:text-lg font-semibold">
+        {{ editingCardId() ? 'Edit Credit Card' : 'Add Credit Card' }}
+      </h2>
+      <button class="text-2xl text-gray-500" (click)="closeAddCard()">✕</button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="creditCardForm" (ngSubmit)="submitCreditCard()"
+      class="flex flex-col 2xl:gap-4 gap-2 p-4 overflow-y-auto flex-1 2xl:text-[15px] text-[12px]">
+      
+      <!-- Card Type Selection -->
+      @if (!editingCardId()) {
+      <div class="flex gap-4 mb-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" [value]="true" [(ngModel)]="isAddingNew" [ngModelOptions]="{standalone: true}"
+            (change)="onCardTypeChange()" class="cursor-pointer" />
+          <span class="text-sm font-medium">Add New Card</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" [value]="false" [(ngModel)]="isAddingNew" [ngModelOptions]="{standalone: true}"
+            (change)="onCardTypeChange()" class="cursor-pointer" />
+          <span class="text-sm font-medium">Select Existing</span>
+        </label>
+      </div>
+      }
+
+      <!-- Existing Card Selection -->
+      @if (!isAddingNew() && !editingCardId()) {
+      <div>
+        <label class="text-sm font-medium">Select Existing Card</label>
+        <select formControlName="existing_card_id" (change)="onExistingCardSelect($event)"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none text-gray-900">
+          <option value="">Select a card</option>
+          @for (card of existingCards(); track card.id) {
+          <option [value]="card.id">{{ card.card_name }} - •••• {{ card.last_four_digits }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Action Selection for Existing Card -->
+      @if (selectedExistingCard() && !editingCardId()) {
+      <div>
+        <label class="text-sm font-medium">What would you like to do?</label>
+        <div class="flex gap-3 mt-2">
+          <button type="button" 
+                  (click)="cardAction.set('')"
+                  [class]="cardAction() === '' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Add for This Month
+          </button>
+          <button type="button" 
+                  (click)="onCardActionChange('edit')"
+                  [class]="cardAction() === 'edit' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Edit Card
+          </button>
+          <button type="button" 
+                  (click)="onCardActionChange('delete')"
+                  [class]="cardAction() === 'delete' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Delete Card
+          </button>
+        </div>
+        
+        @if (cardAction() === '') {
+        <p class="text-xs text-gray-500 mt-2">
+          This will create a new entry for the current month with this card's details.
+        </p>
+        } @else if (cardAction() === 'edit') {
+        <p class="text-xs text-orange-600 mt-2">
+          ⚠️ This will update the card template. Changes will not affect existing monthly entries.
+        </p>
+        } @else if (cardAction() === 'delete') {
+        <p class="text-xs text-red-600 mt-2">
+          ⚠️ This will permanently delete the card template.
+        </p>
+        }
+      </div>
+      }
+      }
+
+      <!-- Card Name -->
+      <div>
+        <label class="text-sm font-medium">Card Name / Bank Name <span class="text-red-500">*</span></label>
+        <input type="text" formControlName="card_name" 
+          [readonly]="selectedExistingCard() && cardAction() === ''"
+          [class.bg-gray-100]="selectedExistingCard() && cardAction() === ''"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+          placeholder="e.g., HDFC Regalia, SBI SimplyCLICK" />
+        @if (creditCardForm.get('card_name')?.invalid && creditCardForm.get('card_name')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Card name is required</p>
+        }
+      </div>
+
+      <!-- Last 4 Digits -->
+      <div>
+        <label class="text-sm font-medium">Last 4 Digits <span class="text-red-500">*</span></label>
+        <input type="text" formControlName="last_four_digits" maxlength="4"
+          [readonly]="selectedExistingCard() && cardAction() === ''"
+          [class.bg-gray-100]="selectedExistingCard() && cardAction() === ''"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" placeholder="1234" />
+        @if (creditCardForm.get('last_four_digits')?.invalid && creditCardForm.get('last_four_digits')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Enter 4 digits</p>
+        }
+      </div>
+
+      <!-- Card Limit -->
+      <div>
+        <label class="text-sm font-medium">Credit Limit <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input type="text" #limitInput formControlName="card_limit"
+            [readonly]="selectedExistingCard() && cardAction() === ''"
+            [class.bg-gray-100]="selectedExistingCard() && cardAction() === ''"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none" placeholder="0"
+            (input)="onAmountChange($event, 'card_limit')" />
+        </div>
+        @if (creditCardForm.get('card_limit')?.invalid && creditCardForm.get('card_limit')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Credit limit is required</p>
+        }
+      </div>
+
+      <!-- Utilized Amount -->
+      <div>
+        <label class="text-sm font-medium">Utilized Amount <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input type="text" #utilizedInput formControlName="utilized_amount"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none" placeholder="0"
+            (input)="onAmountChange($event, 'utilized_amount')" />
+        </div>
+        @if (creditCardForm.get('utilized_amount')?.invalid && creditCardForm.get('utilized_amount')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Utilized amount is required</p>
+        }
+        @if (selectedExistingCard() && cardAction() === '') {
+        <p class="text-xs text-blue-600 mt-1">✓ You can update this for the current month</p>
+        }
+      </div>
+
+      <!-- Billing Cycle Day -->
+      <div>
+        <label class="text-sm font-medium">Billing Cycle Day <span class="text-red-500">*</span></label>
+        <input type="number" formControlName="billing_cycle_day" min="1" max="31"
+          [readonly]="selectedExistingCard() && cardAction() === ''"
+          [class.bg-gray-100]="selectedExistingCard() && cardAction() === ''"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" placeholder="1" />
+        @if (creditCardForm.get('billing_cycle_day')?.invalid && creditCardForm.get('billing_cycle_day')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Enter a day between 1-31</p>
+        }
+      </div>
+
+      <!-- Due Date -->
+      <div>
+        <label class="text-sm font-medium">Payment Due Date <span class="text-red-500">*</span></label>
+        <input type="date" formControlName="due_date"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" />
+        @if (creditCardForm.get('due_date')?.invalid && creditCardForm.get('due_date')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Due date is required</p>
+        }
+        @if (selectedExistingCard() && cardAction() === '') {
+        <p class="text-xs text-blue-600 mt-1">✓ You can update this for the current month</p>
+        }
+      </div>
+
+      <!-- Due Amount -->
+      <div>
+        <label class="text-sm font-medium">Due Amount <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input type="text" #dueInput formControlName="due_amount"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none" placeholder="0"
+            (input)="onAmountChange($event, 'due_amount')" />
+        </div>
+        @if (creditCardForm.get('due_amount')?.invalid && creditCardForm.get('due_amount')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Due amount is required</p>
+        }
+        @if (selectedExistingCard() && cardAction() === '') {
+        <p class="text-xs text-blue-600 mt-1">✓ You can update this for the current month</p>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-auto flex gap-3 pt-4">
+        <button type="button" (click)="closeAddCard()" class="flex-1 rounded-lg bg-gray-200 py-2">
+          Cancel
+        </button>
+        <button type="submit" 
+          [class]="cardAction() === 'delete' ? 'bg-red-500' : 'bg-emerald-500'"
+          class="flex-1 rounded-lg text-white py-2">
+          @if (cardAction() === 'delete') {
+            Delete Card
+          } @else if (cardAction() === 'edit') {
+            Update Card
+          } @else if (editingCardId()) {
+            Update Entry
+          } @else {
+            Add Card
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

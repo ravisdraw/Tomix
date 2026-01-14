@@ -1,0 +1,304 @@
+/* Post Office Scheme Container */
+.scheme-container {
+  perspective: 1000px;
+  cursor: pointer;
+  height: 300px;
+}
+
+.post-office-scheme {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.post-office-scheme.flipped {
+  transform: rotateY(180deg);
+}
+
+.scheme-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #fdc830 100%);
+}
+
+/* Front of Scheme - India Post Theme */
+.scheme-front {
+  z-index: 2;
+}
+
+.post-office-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.post-office-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8px 16px;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.post-office-emblem {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 8px;
+  border-radius: 50%;
+  backdrop-filter: blur(10px);
+}
+
+.scheme-name {
+  font-size: 20px;
+  margin-bottom: 20px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border-left: 4px solid rgba(255, 255, 255, 0.5);
+}
+
+.scheme-info {
+  margin-top: auto;
+}
+
+.info-row-po {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  backdrop-filter: blur(5px);
+}
+
+.info-label-po {
+  font-size: 12px;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.info-value-po {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.post-office-footer {
+  margin-top: 16px;
+  text-align: center;
+  padding-top: 12px;
+  border-top: 2px solid rgba(255, 255, 255, 0.3);
+  font-style: italic;
+}
+
+/* Back of Scheme */
+.scheme-back {
+  transform: rotateY(180deg);
+  padding: 24px;
+}
+
+.scheme-details {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 13px;
+}
+
+.detail-row.highlight {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+  border-bottom: none;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.detail-label {
+  font-size: 12px;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.detail-row.highlight .detail-value {
+  font-size: 15px;
+}
+
+/* Action Buttons */
+.scheme-actions {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 16px;
+  z-index: 10;
+}
+
+.action-btn {
+  background: rgba(255, 255, 255, 0.95);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.action-btn i {
+  font-size: 24px;
+}
+
+.edit-btn i {
+  color: #f97316;
+}
+
+.delete-btn i {
+  color: #ef4444;
+}
+
+/* Skeleton Loader */
+.skeleton-card {
+  height: 300px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s ease-in-out infinite;
+}
+
+.skeleton-card-content {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .scheme-container {
+    height: 280px;
+  }
+
+  .scheme-name {
+    font-size: 16px;
+    min-height: 50px;
+  }
+
+  .info-value-po {
+    font-size: 13px;
+  }
+
+  .action-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .action-btn i {
+    font-size: 20px;
+  }
+}
+
+/* Table Styles */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+thead {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+}
+
+tbody tr:hover {
+  background: #fff7ed;
+}
+
+tbody tr.bg-orange-100 {
+  background: #ffedd5;
+  font-weight: 600;
+}
+
+td, th {
+  padding: 12px 16px;
+}
+
+/* Scrollbar Styling */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #ff6b35;
+  border-radius: 10px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #f7931e;
+}
+
+.scheme-details::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scheme-details::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.scheme-details::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}

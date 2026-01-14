@@ -1,0 +1,445 @@
+<div class="w-full h-full flex flex-col 2xl:px-8 md:px-5">
+  <!-- Header -->
+  <div class="w-full 2xl:h-[15%] flex place-items-center justify-between">
+    <div class="font-medium 2xl:text-[25px] text-[22px] flex items-center gap-3">
+      <i class='bx bx-trending-up text-3xl text-blue-600'></i>
+      <span>Stocks & Mutual Funds</span>
+    </div>
+    <div class="flex gap-3 justify-center place-items-center">
+      <div class="p-3 flex justify-center place-items-center">
+        <i class="bx bx-plus rounded-[10px] bg-[#08B783] p-3 2xl:text-[20px] text-[16px] font-bold"
+          style="color: #ffffff" (click)="openAddInvestment()"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Summary -->
+  <div class="w-full mb-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-linear-to-br from-blue-300 to-blue-600 rounded-xl p-5 text-white shadow-lg">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm opacity-90 mb-1">Total Invested</p>
+          <p class="text-2xl font-bold">₹{{ formatIndianRupee(investmentStats().totalInvested) }}</p>
+        </div>
+        <i class='bx bx-wallet text-4xl opacity-50'></i>
+      </div>
+    </div>
+
+    <div class="bg-linear-to-br from-green-300 to-green-600 rounded-xl p-5 text-white shadow-lg">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm opacity-90 mb-1">Current Value</p>
+          <p class="text-2xl font-bold">₹{{ formatIndianRupee(investmentStats().totalCurrentValue) }}</p>
+        </div>
+        <i class='bx bx-line-chart-down text-4xl opacity-50'></i>
+      </div>
+    </div>
+
+    <div class="rounded-xl p-5 text-white shadow-lg"
+         [ngClass]="investmentStats().totalProfitLoss >= 0 ? 'bg-linear-to-br from-emerald-300 to-emerald-600' : 'bg-linear-to-br from-red-500 to-red-600'">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm opacity-90 mb-1">Profit/Loss</p>
+          <p class="text-2xl font-bold">₹{{ formatIndianRupee(investmentStats().totalProfitLoss) }}</p>
+          <p class="text-xs opacity-80">{{ investmentStats().totalProfitLossPercentage.toFixed(2) }}%</p>
+        </div>
+        <i class='bx text-4xl opacity-50' 
+           [ngClass]="investmentStats().totalProfitLoss >= 0 ? 'bx-trending-up' : 'bx-trending-down'"></i>
+      </div>
+    </div>
+
+    <div class="bg-linear-to-br from-purple-300 to-purple-600 rounded-xl p-5 text-white shadow-lg">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm opacity-90 mb-1">Total Funds</p>
+          <p class="text-2xl font-bold">{{ investmentStats().mutualFundsCount + investmentStats().stocksCount }}</p>
+          <p class="text-xs opacity-80">{{ investmentStats().mutualFundsCount }} MF | {{ investmentStats().stocksCount }} Stocks</p>
+        </div>
+        <i class='bx bx-package text-4xl opacity-50'></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-full flex-1 flex pb-5 2xl:gap-5 gap-2 flex-col overflow-hidden">
+    <div class="w-full flex-1 rounded-[10px] bg-[#F7FCFC] p-5 overflow-hidden">
+      <div class="w-full h-full flex flex-col">
+        <div class="font-medium 2xl:text-[20px] text-[16px] mb-4 shrink-0 flex items-center gap-2">
+          <i class='bx bx-briefcase text-blue-600'></i>
+          <span>Your Investments Portfolio</span>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto min-h-0">
+          @if (isCheckingData()) {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (item of [1, 2, 3]; track $index) {
+            <div class="skeleton-card">
+              <div class="skeleton skeleton-card-content"></div>
+            </div>
+            }
+          </div>
+          } @else if (fundsSummary().length === 0) {
+          <div class="w-full flex flex-col items-center justify-center text-gray-400 h-full">
+            <i class='bx bx-package text-6xl mb-3'></i>
+            <p class="text-lg">No investments added yet</p>
+            <p class="text-sm">Click the + button to add your first investment</p>
+          </div>
+          } @else {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-5">
+            @for (fund of fundsSummary(); track fund.fund_id; let idx = $index) {
+            <div class="fund-card group bg-white rounded-xl border-2 hover:border-blue-400 transition-all duration-300 p-6 shadow-sm hover:shadow-lg"
+                 [ngClass]="fund.fund_type === 'Mutual Fund' ? 'border-blue-200' : 'border-purple-200'">
+              
+              <!-- Fund Header -->
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <div class="w-12 h-12 rounded-lg flex items-center justify-center shrink-0"
+                       [ngClass]="getFundTypeColor(fund.fund_type)">
+                    <i class='bx bx-trending-up text-2xl' [ngClass]="getFundTypeIcon(fund.fund_type)"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="font-bold text-lg text-gray-800 line-clamp-2 group-hover:line-clamp-none transition-all" 
+                        >
+                      {{ fund.fund_name }}
+                    </h3>
+                    <p class="text-sm text-gray-500">{{ fund.fund_type }}</p>
+                  </div>
+                </div>
+                <!-- <div class="flex gap-2">
+                  <button type="button" 
+                          (click)="showFundTransactions(fund)"
+                          class="text-gray-400 hover:text-blue-600 transition-colors"
+                          title="View transactions">
+                    <i class="bx bx-history text-xl"></i>
+                  </button>
+                </div> -->
+              </div>
+
+              <!-- Fund ID Badge -->
+              <!-- <div class="mb-4 px-3 py-1 bg-gray-100 rounded-lg inline-block">
+                <span class="text-xs font-mono text-gray-600">{{ fund.fund_id }}</span>
+              </div> -->
+
+              <!-- Fund Details -->
+              <div class="space-y-3">
+                <!-- Total Quantity -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Total Units</span>
+                  <span class="font-semibold text-gray-900">{{ fund.total_quantity }}</span>
+                </div>
+
+                <!-- Average Bought Price -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Avg. Bought Price</span>
+                  <span class="font-semibold text-gray-900">₹{{ formatIndianRupee(fund.avg_bought_price) }}</span>
+                </div>
+
+                <!-- Current Price with Update Button -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Current Price</span>
+                  <div class="flex items-center gap-2">
+                    <span class="font-semibold text-gray-900">₹{{ formatIndianRupee(fund.current_price) }}</span>
+                    <button type="button"
+                            (click)="updateFundPrice(fund)"
+                            class="text-blue-500 hover:text-blue-700 text-xs"
+                            title="Update price">
+                      <i class="bx bx-edit-alt"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Total Invested -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Total Invested</span>
+                  <span class="font-semibold text-gray-900">₹{{ formatIndianRupee(fund.total_invested) }}</span>
+                </div>
+
+                <!-- Current Value -->
+                <div class="flex justify-between items-center py-3 bg-blue-50 rounded-lg px-3">
+                  <span class="text-sm font-medium text-blue-700">Current Value</span>
+                  <span class="font-bold text-lg text-blue-600">₹{{ formatIndianRupee(fund.total_current_value) }}</span>
+                </div>
+
+                <!-- Profit/Loss -->
+                <div class="flex justify-between items-center py-3 rounded-lg px-3"
+                     [ngClass]="fund.total_profit_loss >= 0 ? 'bg-green-50' : 'bg-red-50'">
+                  <span class="text-sm font-medium"
+                        [ngClass]="fund.total_profit_loss >= 0 ? 'text-green-700' : 'text-red-700'">
+                    {{ fund.total_profit_loss >= 0 ? 'Profit' : 'Loss' }}
+                  </span>
+                  <div class="text-right">
+                    <span class="font-bold text-lg block"
+                          [ngClass]="getProfitLossClass(fund.total_profit_loss)">
+                      {{ fund.total_profit_loss >= 0 ? '+' : '' }}₹{{ formatIndianRupee(fund.total_profit_loss) }}
+                    </span>
+                    <span class="text-xs"
+                          [ngClass]="getProfitLossClass(fund.total_profit_loss)">
+                      {{ fund.profit_loss_percentage >= 0 ? '+' : '' }}{{ fund.profit_loss_percentage.toFixed(2) }}%
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Transaction Count & Date Range -->
+                <div class="flex justify-between items-center py-2 text-xs text-gray-500">
+                  <span>{{ fund.transaction_count }} transaction{{ fund.transaction_count > 1 ? 's' : '' }}</span>
+                  <span>{{ formatDate(fund.first_purchase_date) }}</span>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                <button (click)="showFundTransactions(fund)" 
+                        class="flex-1 py-2 px-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+                  <i class='bx bx-list-ul mr-1'></i>Transactions
+                </button>
+                <button (click)="deleteFund(fund)" 
+                        class="py-2 px-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+                  <i class='bx bx-trash-alt'></i>
+                </button>
+              </div>
+            </div>
+            }
+          </div>
+          }
+        </div>
+
+        <!-- Transactions Table -->
+        @if (showTransactionsForFund()) {
+        <div class="mt-6 border-t pt-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-medium 2xl:text-[18px] text-[16px]">Transaction History</h3>
+            <button type="button" 
+                    (click)="showTransactionsForFund.set(null); selectedFundTransactions.set([])"
+                    class="text-gray-500 hover:text-gray-700">
+              <i class="bx bx-x text-2xl"></i>
+            </button>
+          </div>
+
+          @if (isLoadingTransactions()) {
+          <div class="text-center text-gray-400 py-8">
+            Loading transactions...
+          </div>
+          } @else if (selectedFundTransactions().length === 0) {
+          <div class="text-center text-gray-400 py-8">
+            No transactions found
+          </div>
+          } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Date</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Fund Name</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Type</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Quantity</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Bought Price</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Current Price</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Invested</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Current Value</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">P/L</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                @for (transaction of selectedFundTransactions(); track transaction.id) {
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm">{{ formatDate(transaction.purchase_date) }}</td>
+                  <td class="px-4 py-3 text-sm font-medium">{{ transaction.fund_name }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <span class="px-2 py-1 rounded-full text-xs font-medium"
+                          [ngClass]="getFundTypeColor(transaction.fund_type)">
+                      {{ transaction.fund_type }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">{{ transaction.quantity }}</td>
+                  <td class="px-4 py-3 text-sm">₹{{ formatIndianRupee(transaction.bought_price) }}</td>
+                  <td class="px-4 py-3 text-sm">₹{{ formatIndianRupee(transaction.current_price) }}</td>
+                  <td class="px-4 py-3 text-sm">₹{{ formatIndianRupee(transaction.invested_amount!) }}</td>
+                  <td class="px-4 py-3 text-sm font-bold text-blue-600">₹{{ formatIndianRupee(transaction.current_value!) }}</td>
+                  <td class="px-4 py-3 text-sm">
+                    <div [ngClass]="getProfitLossClass(transaction.profit_loss!)">
+                      <div class="font-bold">
+                        {{ transaction.profit_loss! >= 0 ? '+' : '' }}₹{{ formatIndianRupee(transaction.profit_loss!) }}
+                      </div>
+                      <div class="text-xs">
+                        {{ transaction.profit_loss_percentage! >= 0 ? '+' : '' }}{{ transaction.profit_loss_percentage!.toFixed(2) }}%
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-sm text-center">
+                    <button type="button" 
+                            (click)="deleteTransaction(transaction.id!)"
+                            class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                            title="Delete transaction">
+                      <i class="bx bx-trash text-lg"></i>
+                    </button>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Sliding Form -->
+  <div
+    class="fixed top-0 right-0 z-50 h-full 2xl:max-w-md w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col translate-x-full"
+    [class.translate-x-0]="showAddInvestment()" [class.translate-x-full]="!showAddInvestment()">
+    <!-- Form Header -->
+    <div class="flex items-center justify-between p-4 border-b bg-linear-to-r from-blue-400 to-blue-600">
+      <h2 class="2xl:text-lg font-semibold text-white">
+        {{ editingInvestmentId() ? 'Edit Investment' : 'Add Investment' }}
+      </h2>
+      <button class="text-2xl text-white hover:text-gray-200" (click)="closeAddInvestment()">✕</button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="investmentForm" (ngSubmit)="submitInvestment()"
+      class="flex flex-col 2xl:gap-4 gap-2 p-4 overflow-y-auto flex-1 2xl:text-[15px] text-[12px]">
+      
+      <!-- Add to Existing Fund Checkbox -->
+      <div class="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+        <input type="checkbox" 
+               id="addToExisting" 
+               [(ngModel)]="isAddingToExistingFund"
+               [ngModelOptions]="{standalone: true}"
+               (change)="onAddToExistingChange()"
+               class="w-4 h-4 text-blue-600">
+        <label for="addToExisting" class="text-sm font-medium text-blue-900 cursor-pointer">
+          Add to existing fund
+        </label>
+      </div>
+
+      <!-- Existing Fund Selection -->
+      @if (isAddingToExistingFund()) {
+      <div class="form-group">
+        <label class="block font-medium text-gray-700 mb-1">Select Existing Fund</label>
+        <select formControlName="existing_fund_id" 
+                (change)="onExistingFundSelect()"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="">-- Select a fund --</option>
+          @for (fund of availableFunds(); track fund.fund_id) {
+          <option [value]="fund.fund_id">{{ fund.fund_name }} ({{ fund.fund_type }})</option>
+          }
+        </select>
+      </div>
+      }
+
+      <!-- Fund/Stock Name -->
+      <div class="form-group">
+        <label class="block font-medium text-gray-700 mb-1">
+          Fund/Stock Name <span class="text-red-500">*</span>
+        </label>
+        <input type="text" 
+               formControlName="fund_name" 
+               placeholder="e.g., HDFC Top 100 Fund or Reliance Industries"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               [class.border-red-500]="investmentForm.get('fund_name')?.invalid && investmentForm.get('fund_name')?.touched">
+        @if (investmentForm.get('fund_name')?.invalid && investmentForm.get('fund_name')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Fund/Stock name is required</p>
+        }
+      </div>
+
+      <!-- Fund Type -->
+      <div class="form-group">
+        <label class="block font-medium text-gray-700 mb-1">
+          Type <span class="text-red-500">*</span>
+        </label>
+        <select formControlName="fund_type" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+          <option value="Mutual Fund">Mutual Fund</option>
+          <option value="Stock">Stock</option>
+        </select>
+      </div>
+
+      <!-- Quantity -->
+      <div class="form-group">
+        <label class="block font-medium text-gray-700 mb-1">
+          Quantity/Units <span class="text-red-500">*</span>
+        </label>
+        <input type="number" 
+               formControlName="quantity" 
+               step="0.0001"
+               placeholder="Number of units"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               [class.border-red-500]="investmentForm.get('quantity')?.invalid && investmentForm.get('quantity')?.touched">
+        @if (investmentForm.get('quantity')?.invalid && investmentForm.get('quantity')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Quantity must be greater than 0</p>
+        }
+      </div>
+
+      <!-- Bought Price -->
+      <div class="form-group">
+        <label class="block font-medium text-gray-700 mb-1">
+          Bought Price (₹) <span class="text-red-500">*</span>
+        </label>
+        <input type="number" 
+               formControlName="bought_price" 
+               step="0.01"
+               placeholder="Price per unit at purchase"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               [class.border-red-500]="investmentForm.get('bought_price')?.invalid && investmentForm.get('bought_price')?.touched">
+        @if (investmentForm.get('bought_price')?.invalid && investmentForm.get('bought_price')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Bought price must be greater than 0</p>
+        }
+      </div>
+
+      <!-- Current Price -->
+      <div class="form-group">
+        <label class="block font-medium text-gray-700 mb-1">
+          Current Price (₹) <span class="text-red-500">*</span>
+        </label>
+        <input type="number" 
+               formControlName="current_price" 
+               step="0.01"
+               placeholder="Current market price"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               [class.border-red-500]="investmentForm.get('current_price')?.invalid && investmentForm.get('current_price')?.touched">
+        @if (investmentForm.get('current_price')?.invalid && investmentForm.get('current_price')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Current price must be greater than 0</p>
+        }
+      </div>
+
+      <!-- Purchase Date -->
+      <div class="form-group">
+        <label class="block font-medium text-gray-700 mb-1">
+          Purchase Date <span class="text-red-500">*</span>
+        </label>
+        <input type="date" 
+               formControlName="purchase_date" 
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+               [class.border-red-500]="investmentForm.get('purchase_date')?.invalid && investmentForm.get('purchase_date')?.touched">
+        @if (investmentForm.get('purchase_date')?.invalid && investmentForm.get('purchase_date')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Purchase date is required</p>
+        }
+      </div>
+
+      <!-- Notes -->
+      <div class="form-group">
+        <label class="block font-medium text-gray-700 mb-1">Notes (Optional)</label>
+        <textarea formControlName="notes" 
+                  rows="3"
+                  placeholder="Additional notes about this investment"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"></textarea>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="flex gap-3 mt-4 pt-4 border-t">
+        <button type="button" 
+                (click)="closeAddInvestment()"
+                class="flex-1 py-2 px-4 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+          Cancel
+        </button>
+        <button type="submit"
+                [disabled]="investmentForm.invalid"
+                class="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ editingInvestmentId() ? 'Update' : 'Add' }} Investment
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

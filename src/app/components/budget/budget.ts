@@ -106,6 +106,7 @@ export class Budget implements OnInit {
   doughnutColors = signal<string[]>([]);
   showCarryForwardModal = signal(false);
   carryForwardItems = signal<BudgetEntry[]>([]);
+  selectedCarryForwardItems = signal<Set<string | number>>(new Set());
   previousMonth = signal<string>('');
   previousMonthKey = signal<string>('');
   selectedExpenses = signal<Map<string | number, number>>(new Map());
@@ -1021,8 +1022,19 @@ export class Budget implements OnInit {
 
       const currentMonth = this.monthStore.month();
       const carryForwardExpenses = this.carryForwardItems();
+      const selectedIds = this.selectedCarryForwardItems();
 
-      for (const expense of carryForwardExpenses) {
+      // Only include selected items
+      if (selectedIds.size === 0) {
+        alert('Please select at least one item to carry forward.');
+        return;
+      }
+
+      const selectedExpenses = carryForwardExpenses.filter(expense => 
+        selectedIds.has(expense.id)
+      );
+
+      for (const expense of selectedExpenses) {
         // Create new entry in current month with carry forward flag
         await this.budgetStore.saveBudgetEntry(
           {
@@ -1051,7 +1063,43 @@ export class Budget implements OnInit {
   closeCarryForwardModal() {
     this.showCarryForwardModal.set(false);
     this.carryForwardItems.set([]);
+    this.selectedCarryForwardItems.set(new Set());
     this.previousMonthKey.set('');
+  }
+
+  toggleCarryForwardItem(itemId: string | number) {
+    const selected = this.selectedCarryForwardItems();
+    const newSelected = new Set(selected);
+    
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    
+    this.selectedCarryForwardItems.set(newSelected);
+  }
+
+  toggleSelectAllCarryForward() {
+    const selected = this.selectedCarryForwardItems();
+    const allItems = this.carryForwardItems();
+    
+    if (selected.size === allItems.length) {
+      // Deselect all
+      this.selectedCarryForwardItems.set(new Set());
+    } else {
+      // Select all
+      const allIds = new Set(allItems.map(item => item.id));
+      this.selectedCarryForwardItems.set(allIds);
+    }
+  }
+
+  isCarryForwardItemSelected(itemId: string | number): boolean {
+    return this.selectedCarryForwardItems().has(itemId);
+  }
+
+  areAllCarryForwardItemsSelected(): boolean {
+    return this.selectedCarryForwardItems().size === this.carryForwardItems().length && this.carryForwardItems().length > 0;
   }
 
   getSelectedItems(event: any, itemId: string | number, amount: number) {
@@ -1070,6 +1118,15 @@ export class Budget implements OnInit {
   }
 
   async markAsPaid(itemId: string | number, amount: number, bank: string) {
+    // Check if bank account exists
+    const account = this.bankAccounts().find(acc => acc.bank_name.toLowerCase() === bank.toLowerCase());
+    
+    if (!account) {
+      // Silently skip if no bank account exists
+      console.log('No bank account found for:', bank);
+      return;
+    }
+
     let status:boolean = false;
     if (this.paidExpenses().get(itemId) === true) {
       this.paidExpenses().set(itemId, false);
@@ -1081,7 +1138,7 @@ export class Budget implements OnInit {
     console.log(this.paidExpenses());
     try {
       await this.budgetStore.markBudgetEntryAsPaid(String(itemId), this.paidExpenses().get(itemId) || false);
-      await this.updateBankBalance(amount,bank,status);
+      await this.updateBankBalance(amount, bank, status);
     } catch (error) {
       console.error('Error marking budget entry as paid:', error);
       alert('Failed to update payment status. Please try again.');
@@ -1091,23 +1148,31 @@ export class Budget implements OnInit {
 
   async updateBankBalance(amount: number, bank: string, status: boolean) {
     const account = this.bankAccounts().find(acc => acc.bank_name.toLowerCase() === bank.toLowerCase());
-    let amountToUpdate = amount;
-    if (status) {
-      amountToUpdate = account.balance - amount;
-    } else {
-      amountToUpdate = account.balance + amount;
+    
+    if (!account) {
+      console.log('No bank account found for:', bank);
+      return;
     }
+    
+    let newAfterExpensePaid: number;
+    if (status) {
+      // Marking as paid: subtract from after_expense_paid
+      newAfterExpensePaid = account.after_expense_paid - amount;
+    } else {
+      // Unmarking as paid: add back to after_expense_paid
+      newAfterExpensePaid = account.after_expense_paid + amount;
+    }
+    
     try {
-        await this.bankAccountsService.updateBankAccount(account.id, {
-          balance: amountToUpdate,
-        });
-        // reload bank accounts to ensure UI stays in sync with DB
-        const userId = this.userId();
-        if (userId) {
-          await this.loadBankAccounts(userId);
-        }
-      } catch (error) {
-        console.error('Error updating after expense paid status:', error);
+      await this.bankAccountsService.updateAfterExpensePaid(account.id, newAfterExpensePaid);
+      
+      // reload bank accounts to ensure UI stays in sync with DB
+      const userId = this.userId();
+      if (userId) {
+        await this.loadBankAccounts(userId);
       }
+    } catch (error) {
+      console.error('Error updating after expense paid status:', error);
+    }
   }
 }

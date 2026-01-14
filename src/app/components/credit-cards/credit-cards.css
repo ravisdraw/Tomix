@@ -1,0 +1,304 @@
+/* Form Styling */
+form input,
+select {
+  border: 1px solid lightgray;
+}
+
+form select > option {
+  color: black;
+}
+
+/* Skeleton Loader Styles */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-card {
+  height: 240px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.skeleton-card-content {
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+}
+
+/* Credit Card Flip Animation */
+.card-container {
+  perspective: 1000px;
+  height: 230px;
+  width: 380px;
+  cursor: pointer;
+}
+
+.credit-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.credit-card.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 16px;
+  padding: 24px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.card-front {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Card Front Elements */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.card-chip {
+  width: 45px;
+  height: 35px;
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 50%, #ffd700 100%);
+  border-radius: 6px;
+  position: relative;
+}
+
+.card-chip::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 35px;
+  height: 25px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.card-type {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+
+.card-number {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 4px;
+  text-align: center;
+  margin: 20px 0;
+  font-family: 'Courier New', monospace;
+}
+
+.card-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.card-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.card-value {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Card Back Elements */
+.magnetic-strip {
+  width: calc(100% + 48px);
+  height: 50px;
+  background: linear-gradient(90deg, #333 0%, #000 50%, #333 100%);
+  margin: -24px -24px 0 -24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+/* Info icon positioning */
+.card-back {
+  position: relative;
+}
+
+.card-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.detail-label {
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.detail-value {
+  font-weight: 700;
+}
+
+/* Utilization Bar */
+.utilization-container {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.utilization-label {
+  font-size: 11px;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.utilization-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.utilization-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.utilization-fill.high-utilization {
+  background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);
+}
+
+/* Card Actions */
+.card-actions {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 24px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.card-actions i {
+  font-size: 28px;
+  color: #0f1f3c;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+/* .card-actions i:hover {
+  transform: scale(1.2);
+} */
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .card-number {
+    font-size: 20px;
+    letter-spacing: 3px;
+  }
+
+  .card-container {
+    height: 280px;
+    width: 380px;
+  }
+
+  .card-chip {
+    width: 40px;
+    height: 30px;
+  }
+
+  .card-chip::before {
+    width: 30px;
+    height: 22px;
+  }
+}
+
+/* Hover Effects */
+.card-container:hover .credit-card:not(.flipped) {
+  /* transform: translateY(-8px) scale(1.02); */
+  transition: transform 0.3s ease;
+}
+
+/* Grid Layout Improvements */
+.grid {
+  display: grid;
+}
+
+.grid-cols-1 {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 768px) {
+  .md\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Summary Cards Animation */
+.rounded-\[10px\] {
+  transition: all 0.3s ease;
+}
+
+.rounded-\[10px\]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

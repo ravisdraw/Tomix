@@ -1,0 +1,363 @@
+<div class="w-full h-full flex flex-col 2xl:px-8 md:px-5">
+  <!-- Header -->
+  <div class="w-full 2xl:h-[15%] flex place-items-center justify-between">
+    <div class="font-medium 2xl:text-[25px] text-[22px] flex items-center gap-3">
+      <i class='bx bx-envelope text-3xl text-orange-600'></i>
+      <span>Post Office Investments</span>
+    </div>
+    <div class="flex gap-3 justify-center place-items-center">
+      <div class="p-3 flex justify-center place-items-center">
+        <i class="bx bx-plus rounded-[10px] bg-[#08B783] p-3 2xl:text-[20px] text-[16px] font-bold"
+          style="color: #ffffff" (click)="openAddScheme()"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="w-full h-[85%] flex pb-5 2xl:gap-5 gap-2 flex-col">
+
+    <div class="w-full flex-1 rounded-[10px] bg-[#F7FCFC] p-5 overflow-hidden">
+      <div class="w-full h-full flex flex-col">
+        <div class="font-medium 2xl:text-[20px] text-[16px] mb-4 shrink-0 flex items-center gap-2">
+          <i class='bx bx-building text-orange-600'></i>
+          <span>Your Post Office Schemes</span>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto min-h-0">
+          @if (isCheckingData()) {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (item of [1, 2, 3]; track $index) {
+            <div class="skeleton-card">
+              <div class="skeleton skeleton-card-content"></div>
+            </div>
+            }
+          </div>
+          } @else if (allSchemes().length === 0) {
+          <div class="w-full flex items-center justify-center text-gray-400 h-full">
+            No schemes added
+          </div>
+          } @else {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (scheme of allSchemes(); track scheme.scheme_id; let idx = $index) {
+            <div class="scheme-card bg-white rounded-xl border-2 border-gray-200 hover:border-orange-400 transition-all duration-300 p-6 shadow-sm hover:shadow-md">
+              <!-- Scheme Header -->
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <i class='bx bx-envelope text-2xl text-orange-600'></i>
+                  </div>
+                  <div>
+                    <h3 class="font-bold text-lg text-gray-800">{{ scheme.scheme_name }}</h3>
+                    <p class="text-sm text-gray-500">Post Office Scheme</p>
+                  </div>
+                </div>
+                <button type="button" 
+                        (click)="showSchemeHistory(scheme)"
+                        class="text-gray-400 hover:text-orange-600 transition-colors">
+                  <i class="bx bx-info-circle text-2xl"></i>
+                </button>
+              </div>
+
+              <!-- Scheme Details -->
+              <div class="space-y-3">
+                <!-- Total Amount Invested -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Total Invested</span>
+                  <span class="font-semibold text-gray-900">₹{{ formatIndianRupee(getSchemeTotalAmount(scheme.scheme_id!)) }}</span>
+                </div>
+
+                <!-- Current Interest Earned -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Interest Earned</span>
+                  <span class="font-semibold text-green-600">₹{{ formatIndianRupee(getSchemeTotalInterest(scheme.scheme_id!)) }}</span>
+                </div>
+
+                <!-- Months Paid / Total Months -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Progress</span>
+                  <span class="font-semibold text-gray-900">{{ getSchemeMonthsPaid(scheme.scheme_id!) }} / {{ getTotalMonths(scheme.scheme_id!) }} months</span>
+                </div>
+
+                <!-- Interest Rate -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Interest Rate</span>
+                  <span class="font-semibold text-blue-600">{{ scheme.interest_rate }}% p.a.</span>
+                </div>
+
+                <!-- First Invested Date -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Started On</span>
+                  <span class="font-semibold text-gray-900">{{ getSchemeFirstInvestedDate(scheme.scheme_id!) }}</span>
+                </div>
+
+                <!-- Maturity Date -->
+                <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span class="text-sm text-gray-600">Matures On</span>
+                  <span class="font-semibold text-gray-900">{{ getSchemeMaturityDate(scheme.scheme_id!) }}</span>
+                </div>
+
+                <!-- Current Maturity Value -->
+                <div class="flex justify-between items-center py-3 bg-orange-50 rounded-lg px-3 mt-3">
+                  <span class="text-sm font-medium text-orange-700">Current Value</span>
+                  <span class="font-bold text-lg text-orange-600">₹{{ formatIndianRupee(getSchemeMaturityValue(scheme.scheme_id!)) }}</span>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <!-- <div class="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                <button (click)="editScheme(scheme)" 
+                        class="flex-1 py-2 px-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+                  <i class='bx bx-edit-alt mr-1'></i>Edit
+                </button>
+                <button (click)="deleteScheme(scheme.id!)" 
+                        class="flex-1 py-2 px-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
+                  <i class='bx bx-trash-alt mr-1'></i>Delete
+                </button>
+              </div> -->
+            </div>
+            }
+          </div>
+          }
+        </div>
+
+        <!-- Scheme History Table -->
+        @if (showHistoryForScheme()) {
+        <div class="mt-6 border-t pt-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-medium 2xl:text-[18px] text-[16px]">Scheme History</h3>
+            <button type="button" 
+                    (click)="showHistoryForScheme.set(null); schemeHistory.set([])"
+                    class="text-gray-500 hover:text-gray-700">
+              <i class="bx bx-x text-2xl"></i>
+            </button>
+          </div>
+
+          @if (isLoadingHistory()) {
+          <div class="text-center text-gray-400 py-8">
+            Loading history...
+          </div>
+          } @else if (schemeHistory().length === 0) {
+          <div class="text-center text-gray-400 py-8">
+            No history found for this scheme
+          </div>
+          } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Paid Date</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Scheme Name</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Amount</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Interest Rate</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Maturity Period</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Current Value</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200">
+                @for (entry of schemeHistory(); track entry.id) {
+                <tr class="hover:bg-gray-50">
+                  <td class="px-4 py-3 text-sm">{{ formatPaidDate(entry.paid_date) }}</td>
+                  <td class="px-4 py-3 text-sm font-medium">{{ entry.scheme_name }}</td>
+                  <td class="px-4 py-3 text-sm">₹{{ formatIndianRupee(entry.principal_amount) }}</td>
+                  <td class="px-4 py-3 text-sm">{{ entry.interest_rate }}% p.a.</td>
+                  <td class="px-4 py-3 text-sm">{{ (entry.maturity_months / 12).toFixed(1) }} years</td>
+                  <td class="px-4 py-3 text-sm font-bold text-blue-600">₹{{ formatIndianRupee(calculateMaturity(entry)) }}</td>
+                  <td class="px-4 py-3 text-sm text-center">
+                    <button type="button" 
+                            (click)="deleteHistoryEntry(entry.id!)"
+                            class="text-red-500 hover:text-red-700 hover:bg-red-50 p-1 rounded transition-colors"
+                            title="Delete this entry">
+                      <i class="bx bx-trash text-lg"></i>
+                    </button>
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Sliding Form -->
+  <div
+    class="fixed top-0 right-0 z-50 h-full 2xl:max-w-md w-sm bg-white shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col translate-x-full"
+    [class.translate-x-0]="showAddScheme()" [class.translate-x-full]="!showAddScheme()">
+    <!-- Form Header -->
+    <div class="flex items-center justify-between p-4 border-b bg-linear-to-r from-orange-400 to-orange-600">
+      <h2 class="2xl:text-lg font-semibold text-white">
+        {{ editingSchemeId() ? 'Edit Scheme' : 'Add Scheme' }}
+      </h2>
+      <button class="text-2xl text-white hover:text-gray-200" (click)="closeAddScheme()">✕</button>
+    </div>
+
+    <!-- Form -->
+    <form [formGroup]="schemeForm" (ngSubmit)="submitScheme()"
+      class="flex flex-col 2xl:gap-4 gap-2 p-4 overflow-y-auto flex-1 2xl:text-[15px] text-[12px]">
+      
+      <!-- Scheme Type Selection -->
+      @if (!editingSchemeId()) {
+      <div class="flex gap-4 mb-4">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" [value]="true" [(ngModel)]="isAddingNew" [ngModelOptions]="{standalone: true}"
+            (change)="onSchemeTypeChange()" class="cursor-pointer" />
+          <span class="text-sm font-medium">Add New Scheme</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" [value]="false" [(ngModel)]="isAddingNew" [ngModelOptions]="{standalone: true}"
+            (change)="onSchemeTypeChange()" class="cursor-pointer" />
+          <span class="text-sm font-medium">Select Existing</span>
+        </label>
+      </div>
+      }
+
+      <!-- Existing Scheme Selection -->
+      @if (!isAddingNew() && !editingSchemeId()) {
+      <div>
+        <label class="text-sm font-medium">Select Existing Scheme</label>
+        <select formControlName="existing_scheme_id" (change)="onExistingSchemeSelect($event)"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none text-gray-900">
+          <option value="">Select a scheme</option>
+          @for (scheme of allSchemes(); track scheme.scheme_id) {
+          <option [value]="scheme.scheme_id">{{ scheme.scheme_name }}</option>
+          }
+        </select>
+      </div>
+
+      <!-- Action Selection for Existing Scheme -->
+      @if (selectedExistingScheme() && !editingSchemeId()) {
+      <div>
+        <label class="text-sm font-medium">What would you like to do?</label>
+        <div class="flex gap-3 mt-2">
+          <button type="button" 
+                  (click)="schemeAction.set('')"
+                  [class]="schemeAction() === '' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Add Entry
+          </button>
+          <button type="button" 
+                  (click)="onSchemeActionChange('edit')"
+                  [class]="schemeAction() === 'edit' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Edit Scheme
+          </button>
+          <button type="button" 
+                  (click)="onSchemeActionChange('delete')"
+                  [class]="schemeAction() === 'delete' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-700'"
+                  class="flex-1 py-2 px-4 rounded-lg font-medium transition-colors">
+            Delete
+          </button>
+        </div>
+        
+        @if (schemeAction() === '') {
+        <p class="text-xs text-gray-500 mt-2">
+          This will create a new entry for this scheme.
+        </p>
+        } @else if (schemeAction() === 'edit') {
+        <p class="text-xs text-orange-600 mt-2">
+          ⚠️ This will update the scheme details. Changes will not affect existing entries.
+        </p>
+        } @else if (schemeAction() === 'delete') {
+        <p class="text-xs text-red-600 mt-2">
+          ⚠️ This will permanently delete this scheme entry.
+        </p>
+        }
+      </div>
+      }
+      }
+
+      <!-- Scheme Name -->
+      <div>
+        <label class="text-sm font-medium">Scheme Name <span class="text-red-500">*</span></label>
+        <input type="text" formControlName="scheme_name" 
+          [readonly]="selectedExistingScheme() && schemeAction() === ''"
+          [class.bg-gray-100]="selectedExistingScheme() && schemeAction() === ''"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none"
+          placeholder="e.g., PPF, NSC, SCSS" />
+        @if (schemeForm.get('scheme_name')?.invalid && schemeForm.get('scheme_name')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Scheme name is required</p>
+        }
+      </div>
+
+      <!-- Interest Rate -->
+      <div>
+        <label class="text-sm font-medium">Interest Rate (% p.a.) <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <input type="number" step="0.01" formControlName="interest_rate"
+            [readonly]="selectedExistingScheme() && schemeAction() === ''"
+            [class.bg-gray-100]="selectedExistingScheme() && schemeAction() === ''"
+            class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" placeholder="7.1" />
+          <span class="absolute right-3 top-3 text-gray-500">%</span>
+        </div>
+        @if (schemeForm.get('interest_rate')?.invalid && schemeForm.get('interest_rate')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Interest rate is required</p>
+        }
+      </div>
+
+      <!-- Investment Amount -->
+      <div>
+        <label class="text-sm font-medium">Investment Amount <span class="text-red-500">*</span></label>
+        <div class="relative">
+          <span class="absolute left-3 top-3 text-gray-500">₹</span>
+          <input type="text" formControlName="principal_amount"
+            class="mt-1 w-full rounded-lg border px-10 py-2 outline-none" placeholder="0"
+            (input)="onAmountChange($event, 'principal_amount')" />
+        </div>
+        @if (schemeForm.get('principal_amount')?.invalid && schemeForm.get('principal_amount')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Investment amount is required</p>
+        }
+      </div>
+
+      <!-- Paid Date -->
+      <div>
+        <label class="text-sm font-medium">Paid Date <span class="text-red-500">*</span></label>
+        <input type="date" formControlName="paid_date"
+          class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" />
+        @if (schemeForm.get('paid_date')?.invalid && schemeForm.get('paid_date')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Paid date is required</p>
+        }
+      </div>
+
+      <!-- Maturity Period -->
+      <div>
+        <label class="text-sm font-medium">Maturity Period <span class="text-red-500">*</span></label>
+        <div class="flex gap-2">
+          <input type="number" step="0.5" formControlName="maturity_years"
+            [readonly]="selectedExistingScheme() && schemeAction() === ''"
+            [class.bg-gray-100]="selectedExistingScheme() && schemeAction() === ''"
+            class="mt-1 flex-1 rounded-lg border px-3 py-2 outline-none" placeholder="1" />
+          <div class="mt-1 px-4 py-2 bg-gray-100 rounded-lg flex items-center text-gray-600">years</div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1">
+          {{ (schemeForm.get('maturity_years')?.value * 12).toFixed(0) }} months
+        </p>
+        @if (schemeForm.get('maturity_years')?.invalid && schemeForm.get('maturity_years')?.touched) {
+        <p class="text-red-500 text-xs mt-1">Maturity period is required</p>
+        }
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-auto flex gap-3 pt-4">
+        <button type="button" (click)="closeAddScheme()" class="flex-1 rounded-lg bg-gray-200 py-2 hover:bg-gray-300">
+          Cancel
+        </button>
+        <button type="submit" 
+          [class]="schemeAction() === 'delete' ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'"
+          class="flex-1 rounded-lg text-white py-2 transition-colors">
+          @if (schemeAction() === 'delete') {
+            Delete
+          } @else if (schemeAction() === 'edit') {
+            Update Scheme
+          } @else if (editingSchemeId()) {
+            Update Entry
+          } @else {
+            Add Scheme
+          }
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

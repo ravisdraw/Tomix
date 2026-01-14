@@ -34,9 +34,10 @@ export const LoansStore = signalStore(
             const transformedLoans = loans.map((loan: any) => ({
               id: loan.id,
               loanName: loan.loan_name,
-              amount: loan.amount,
+              monthlyEMI: loan.monthly_emi,
               interest: loan.interest,
-              tenure: loan.tenure,
+              totalTenure: loan.total_tenure,
+              paidMonths: loan.paid_months || 0,
               monthlyDueDate: loan.monthly_due_date,
               emoji: loan.emoji || '💰',
               createdAt: loan.created_at,
@@ -60,9 +61,10 @@ export const LoansStore = signalStore(
             const dbLoan = {
               user_id: userId,
               loan_name: loan.loanName,
-              amount: loan.amount,
+              monthly_emi: loan.monthlyEMI,
               interest: loan.interest,
-              tenure: loan.tenure,
+              total_tenure: loan.totalTenure,
+              paid_months: loan.paidMonths || 0,
               monthly_due_date: loan.monthlyDueDate,
               emoji: loan.emoji || '💰',
             };
@@ -72,9 +74,10 @@ export const LoansStore = signalStore(
             const transformedLoan = {
               id: savedLoan.id,
               loanName: savedLoan.loan_name,
-              amount: savedLoan.amount,
+              monthlyEMI: savedLoan.monthly_emi,
               interest: savedLoan.interest,
-              tenure: savedLoan.tenure,
+              totalTenure: savedLoan.total_tenure,
+              paidMonths: savedLoan.paid_months || 0,
               monthlyDueDate: savedLoan.monthly_due_date,
               emoji: savedLoan.emoji,
               createdAt: savedLoan.created_at,
@@ -98,9 +101,10 @@ export const LoansStore = signalStore(
             
             const dbUpdates = {
               loan_name: updates.loanName,
-              amount: updates.amount,
+              monthly_emi: updates.monthlyEMI,
               interest: updates.interest,
-              tenure: updates.tenure,
+              total_tenure: updates.totalTenure,
+              paid_months: updates.paidMonths,
               monthly_due_date: updates.monthlyDueDate,
               emoji: updates.emoji,
             };
@@ -110,9 +114,10 @@ export const LoansStore = signalStore(
             const transformedLoan = {
               id: updatedLoan.id,
               loanName: updatedLoan.loan_name,
-              amount: updatedLoan.amount,
+              monthlyEMI: updatedLoan.monthly_emi,
               interest: updatedLoan.interest,
-              tenure: updatedLoan.tenure,
+              totalTenure: updatedLoan.total_tenure,
+              paidMonths: updatedLoan.paid_months || 0,
               monthlyDueDate: updatedLoan.monthly_due_date,
               emoji: updatedLoan.emoji,
               createdAt: updatedLoan.created_at,

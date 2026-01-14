@@ -5,9 +5,10 @@ export interface LoanRecord {
   id: string;
   user_id: string;
   loan_name: string;
-  amount: number;
   interest: number;
-  tenure: number; // in months
+  monthly_emi: number;  // Changed from amount 
+  total_tenure: number; // Changed from tenure
+  paid_months: number;  // New field
   monthly_due_date: number; // day of month (1-31)
   emoji: string;
   created_at?: string;

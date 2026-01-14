@@ -5,3 +5,18 @@
 @theme {
     --font-poppins : "Poppins", sans-serif;
 }
+
+/* Global styles to prevent blank space at bottom */
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+app-root {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
