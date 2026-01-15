@@ -2,6 +2,18 @@ import { Injectable } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 
+let supabaseInstance: SupabaseClient | null = null;
+
+/**
+ * Create a singleton Supabase client instance
+ */
+function getSupabaseClient(): SupabaseClient {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(environment.supabaseUrl, environment.supabaseAnonKey);
+  }
+  return supabaseInstance;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -9,7 +21,7 @@ export class SupabaseService {
   private supabase: SupabaseClient;
 
   constructor() {
-    this.supabase = createClient(environment.supabaseUrl, environment.supabaseAnonKey);
+    this.supabase = getSupabaseClient();
   }
 
   /**

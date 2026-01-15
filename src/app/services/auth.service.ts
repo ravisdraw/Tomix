@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
+import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { SupabaseService } from './supabase.service';
 
 @Injectable({
   providedIn: 'root',
@@ -11,20 +11,23 @@ export class AuthService {
   private sessionSubject = new BehaviorSubject<Session | null>(null);
   public session$: Observable<Session | null> = this.sessionSubject.asObservable();
 
-  constructor() {
-    this.supabase = createClient(environment.supabaseUrl, environment.supabaseAnonKey);
+  constructor(private supabaseService: SupabaseService) {
+    this.supabase = this.supabaseService.getClient();
     this.initializeSession();
   }
 
   /**
    * Initialize session from stored data
    */
-  private async initializeSession() {
-    const { data } = await this.supabase.auth.getSession();
-    this.sessionSubject.next(data?.session || null);
+  private initializeSession() {
+    // First, check if session exists from previous login
+    this.supabase.auth.getSession().then(({ data }) => {
+      this.sessionSubject.next(data?.session || null);
+    });
 
-    // Listen for auth changes
+    // Listen for auth changes in real-time
     this.supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session);
       this.sessionSubject.next(session);
     });
   }
@@ -33,7 +36,7 @@ export class AuthService {
    * Sign in with Google
    */
   async signInWithGoogle() {
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    const redirectUrl = `${window.location.origin}/auth/callback`;
 
     const { data, error } = await this.supabase.auth.signInWithOAuth({
       provider: 'google',
