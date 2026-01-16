@@ -68,6 +68,14 @@ export class Loans implements OnInit {
   loanForm: any;
   userId = signal<string | null>(null);
   
+  // Selected loans for checkbox tracking
+  selectedLoansForCheckbox = signal<Set<string | number>>(new Set());
+  
+  // Sort field tracking
+  sortField = signal<'monthlyDueDate' | 'paidMonths' | 'outstanding' | 'monthlyEMI' | 'totalEMI' | 'interest'>('monthlyDueDate');
+  sortDirection = signal<'asc' | 'desc'>('asc');
+  sortDropdownOpen = signal(false);
+  
   // EMI Schedule signals
   showSchedule = signal(false);
   selectedLoanForSchedule = signal<Loan | null>(null);
@@ -82,11 +90,78 @@ export class Loans implements OnInit {
     return this.loansStore.loans() as Loan[];
   });
 
+  // Sorted loan items based on selected sort field
+  sortedLoanItems = computed(() => {
+    const items = [...this.loanItems()];
+    const field = this.sortField();
+    const direction = this.sortDirection();
+
+    items.sort((a, b) => {
+      let aVal: number;
+      let bVal: number;
+
+      switch (field) {
+        case 'paidMonths':
+          aVal = a.paidMonths || 0;
+          bVal = b.paidMonths || 0;
+          break;
+        case 'outstanding':
+          aVal = this.calculateRemainingAmount(a.monthlyEMI, a.interest, a.totalTenure - a.paidMonths) || 0;
+          bVal = this.calculateRemainingAmount(b.monthlyEMI, b.interest, b.totalTenure - b.paidMonths) || 0;
+          break;
+        case 'monthlyEMI':
+          aVal = a.monthlyEMI || 0;
+          bVal = b.monthlyEMI || 0;
+          break;
+        case 'totalEMI':
+          aVal = this.calculateTotalLoanAmount(a.monthlyEMI, a.interest, a.totalTenure) || 0;
+          bVal = this.calculateTotalLoanAmount(b.monthlyEMI, b.interest, b.totalTenure) || 0;
+          break;
+        case 'interest':
+          aVal = a.interest || 0;
+          bVal = b.interest || 0;
+          break;
+        case 'monthlyDueDate':
+        default:
+          aVal = a.monthlyDueDate || 0;
+          bVal = b.monthlyDueDate || 0;
+      }
+
+      return direction === 'asc' ? aVal - bVal : bVal - aVal;
+    });
+
+    return items;
+  });
+
   totalLoanAmount = computed(() => {
     return this.loanItems().reduce(
       (sum: number, item: Loan) => sum + (this.calculateTotalLoanAmount(item.monthlyEMI, item.interest, item.totalTenure) || 0),
       0
     );
+  });
+
+  upcomingLoansDue = computed(() => {
+    return this.loanItems().filter((loan) => {
+      const daysLeft = this.calculateDaysLeftForLoan(loan.monthlyDueDate);
+      return daysLeft >= 0 && daysLeft <= 7;
+    });
+  });
+
+  // Computed properties for selected loans
+  totalSelectedEMI = computed(() => {
+    return this.loanItems()
+      .filter((loan) => this.selectedLoansForCheckbox().has(loan.id))
+      .reduce((sum: number, loan: Loan) => sum + (loan.monthlyEMI || 0), 0);
+  });
+
+  totalOutstandingAmount = computed(() => {
+    return this.loanItems()
+      .filter((loan) => this.selectedLoansForCheckbox().has(loan.id))
+      .reduce((sum: number, loan: Loan) => sum + (this.calculateRemainingAmount(loan.monthlyEMI, loan.interest, loan.totalTenure - loan.paidMonths) || 0), 0);
+  });
+
+  totalMonthlyEMI = computed(() => {
+    return this.loanItems().reduce((sum: number, loan: Loan) => sum + (loan.monthlyEMI || 0), 0);
   });
 
   constructor(
@@ -174,6 +249,21 @@ export class Loans implements OnInit {
     } else {
       this.selectedLoanId.set(loanId);
     }
+  }
+
+  toggleLoanCheckbox(loanId: string | number, event: Event) {
+    event.stopPropagation();
+    const selected = new Set(this.selectedLoansForCheckbox());
+    if (selected.has(loanId)) {
+      selected.delete(loanId);
+    } else {
+      selected.add(loanId);
+    }
+    this.selectedLoansForCheckbox.set(selected);
+  }
+
+  isLoanSelected(loanId: string | number): boolean {
+    return this.selectedLoansForCheckbox().has(loanId);
   }
 
   editLoan(loan: Loan) {
@@ -445,5 +535,68 @@ export class Loans implements OnInit {
       (sum: number, item: Loan) => sum + (item.totalTenure || 0),
       0
     );
+  }
+
+  calculateDaysLeftForLoan(dueDate: number): number {
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    let nextDueDate: Date;
+
+    if (currentDay <= dueDate) {
+      nextDueDate = new Date(currentYear, currentMonth, dueDate);
+    } else {
+      nextDueDate = new Date(currentYear, currentMonth + 1, dueDate);
+    }
+
+    const diffTime = nextDueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
+  }
+
+  getDaysLeftText(daysLeft: number): string {
+    if (daysLeft === 0) return 'Today';
+    if (daysLeft === 1) return 'Tomorrow';
+    return `${daysLeft} days`;
+  }
+
+  getNextLoanDueDate(dueDate: number): string {
+    const today = new Date();
+    const currentDay = today.getDate();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    let nextDueDate: Date;
+
+    if (currentDay <= dueDate) {
+      nextDueDate = new Date(currentYear, currentMonth, dueDate);
+    } else {
+      nextDueDate = new Date(currentYear, currentMonth + 1, dueDate);
+    }
+
+    return nextDueDate.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  setSortField(field: 'monthlyDueDate' | 'paidMonths' | 'outstanding' | 'monthlyEMI' | 'totalEMI' | 'interest') {
+    if (this.sortField() === field) {
+      // Toggle direction if same field is clicked
+      this.sortDirection.set(this.sortDirection() === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field with ascending direction
+      this.sortField.set(field);
+      this.sortDirection.set('asc');
+    }
+    this.sortDropdownOpen.set(false);
+  }
+
+  toggleSortDropdown() {
+    this.sortDropdownOpen.set(!this.sortDropdownOpen());
   }
 }
