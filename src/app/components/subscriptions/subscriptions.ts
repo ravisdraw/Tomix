@@ -73,7 +73,31 @@ export class Subscriptions implements OnInit {
       start_date: [this.getTodayDate(), Validators.required],
       end_date: [''],
       is_active: [true],
+      is_mobile_recharge: [false],
       notes: [''],
+    });
+
+    // Subscribe to mobile recharge checkbox changes to update validators
+    this.subscriptionForm.get('is_mobile_recharge')?.valueChanges.subscribe((isMobileRecharge: boolean) => {
+      const billingDateControl = this.subscriptionForm.get('billing_date');
+      const billingCycleControl = this.subscriptionForm.get('billing_cycle');
+      const startDateControl = this.subscriptionForm.get('start_date');
+
+      if (isMobileRecharge) {
+        // For mobile recharge, remove validators
+        billingDateControl?.clearValidators();
+        billingCycleControl?.clearValidators();
+        startDateControl?.clearValidators();
+      } else {
+        // For regular subscriptions, add validators back
+        billingDateControl?.setValidators([Validators.required, Validators.min(1), Validators.max(31)]);
+        billingCycleControl?.setValidators([Validators.required]);
+        startDateControl?.setValidators([Validators.required]);
+      }
+
+      billingDateControl?.updateValueAndValidity();
+      billingCycleControl?.updateValueAndValidity();
+      startDateControl?.updateValueAndValidity();
     });
   }
 
@@ -187,7 +211,7 @@ export class Subscriptions implements OnInit {
     const editingId = this.editingSubscriptionId();
 
     try {
-      const subscriptionData: Subscription = {
+      const subscriptionData: any = {
         user_id: userId,
         name: form.name,
         emoji: form.emoji,
@@ -198,6 +222,7 @@ export class Subscriptions implements OnInit {
         start_date: form.start_date,
         end_date: form.end_date || undefined,
         is_active: form.is_active,
+        is_mobile_recharge: form.is_mobile_recharge || false,
         notes: form.notes,
       };
 
@@ -228,6 +253,7 @@ export class Subscriptions implements OnInit {
       start_date: subscription.start_date,
       end_date: subscription.end_date,
       is_active: subscription.is_active,
+      is_mobile_recharge: (subscription as any).is_mobile_recharge || false,
       notes: subscription.notes,
     });
     this.showAddSubscription.set(true);
@@ -280,6 +306,7 @@ export class Subscriptions implements OnInit {
       start_date: this.getTodayDate(),
       end_date: '',
       is_active: true,
+      is_mobile_recharge: false,
       notes: '',
     });
     this.editingSubscriptionId.set(null);
@@ -320,5 +347,9 @@ export class Subscriptions implements OnInit {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     return diffDays >= 0 && diffDays <= 30; // Expiring within 30 days
+  }
+
+  isMobileRecharge(subscription: Subscription): boolean {
+    return (subscription as any).is_mobile_recharge || false;
   }
 }

@@ -160,6 +160,10 @@ export class Loans implements OnInit {
       .reduce((sum: number, loan: Loan) => sum + (this.calculateRemainingAmount(loan.monthlyEMI, loan.interest, loan.totalTenure - loan.paidMonths) || 0), 0);
   });
 
+  totalOutstandingAmt = computed(() => {
+    return this.loanItems().reduce((sum: number, loan: Loan) => sum + (this.calculateRemainingAmount(loan.monthlyEMI, loan.interest, loan.totalTenure - loan.paidMonths) || 0), 0);
+  });
+
   totalMonthlyEMI = computed(() => {
     return this.loanItems().reduce((sum: number, loan: Loan) => sum + (loan.monthlyEMI || 0), 0);
   });

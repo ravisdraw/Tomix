@@ -171,10 +171,11 @@ export class SubscriptionsService {
 
   /**
    * Calculate monthly total of all active subscriptions
+   * Excludes mobile recharge subscriptions from billing calculations
    */
   calculateMonthlyTotal(subscriptions: Subscription[]): number {
     return subscriptions
-      .filter((sub) => sub.is_active !== false)
+      .filter((sub) => sub.is_active !== false && !(sub as any).is_mobile_recharge)
       .reduce((sum, sub) => {
         if (sub.billing_cycle === 'yearly') {
           return sum + (sub.billing_amount / 12);
@@ -187,9 +188,12 @@ export class SubscriptionsService {
 
   /**
    * Get upcoming subscriptions (within next 7 days)
+   * Excludes mobile recharge subscriptions from billing calculations
    */
   getUpcomingSubscriptions(subscriptions: Subscription[]): Subscription[] {
     return subscriptions.filter((sub) => {
+      // Exclude mobile recharge subscriptions from upcoming billing
+      if ((sub as any).is_mobile_recharge) return false;
       const daysLeft = this.calculateDaysLeft(sub.billing_date);
       return daysLeft >= 0 && daysLeft <= 7;
     });

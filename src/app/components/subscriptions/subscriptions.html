@@ -2,17 +2,9 @@
   <!--Header-->
   <div class="w-full 2xl:h-[15%] flex place-items-center justify-between">
     <div class="font-medium 2xl:text-[25px] text-[22px]">Subscriptions</div>
-    <div class="flex gap-3 justify-center place-items-center">
-      <div class="flex flex-col text-right">
-        <div class="font-semibold 2xl:text-[20px] text-[16px] text-[#FC3134]">
-          Rs. {{ formatIndianRupee(totalMonthlyAmount()) }}
-        </div>
-        <div class="text-[10px] text-gray-500 font-medium">Monthly Total</div>
-      </div>
-      <div class="p-3 justify-center place-items-center">
-        <i class="bx bx-plus rounded-[10px] bg-[#08B783] p-3 2xl:text-[20px] text-[16px] font-bold"
-          style="color: #ffffff" (click)="openAddSubscription()"></i>
-      </div>
+    <div class="p-3 justify-center place-items-center">
+      <i class="bx bx-plus rounded-[10px] bg-[#08B783] p-3 2xl:text-[20px] text-[16px] font-bold"
+        style="color: #ffffff" (click)="openAddSubscription()"></i>
     </div>
   </div>
 
@@ -26,6 +18,12 @@
             <div class="font-medium 2xl:text-[20px] text-[16px]">Active Subscriptions</div>
             <div class="text-[10px] text-gray-500 font-medium">{{ activeSubscriptions().length }} active subscriptions
             </div>
+          </div>
+          <div class="flex flex-col gap-2 text-center items-center justify-center px-4">
+            <div class="2xl:text-[18px] text-[14px] font-semibold text-[#FC3134]">
+              Rs. {{ formatIndianRupee(totalMonthlyAmount()) }}
+            </div>
+            <div class="text-[10px] text-gray-500 font-medium whitespace-nowrap">Monthly Total</div>
           </div>
         </div>
 
@@ -49,15 +47,22 @@
                   @if (sub.plan_details) {
                   <div class="text-[10px] text-gray-500 font-medium">{{ sub.plan_details }}</div>
                   }
+                  @if (!isMobileRecharge(sub)) {
                   <div class="text-[10px] text-gray-500 font-medium">
                     {{ getBillingCycleText(sub.billing_cycle || 'monthly') }} - Day {{ sub.billing_date }}
                   </div>
+                  } @else {
+                  <div class="text-[10px] text-yellow-600 font-medium">
+                    📱 Mobile Recharge
+                  </div>
+                  }
                 </div>
               </div>
               <div class="flex flex-col gap-1 items-end">
                 <div class="font-semibold 2xl:text-[18px] text-[14px] text-[#FC3134]">
                   Rs. {{ formatIndianRupee(sub.billing_amount) }}
                 </div>
+                @if (!isMobileRecharge(sub)) {
                 <div class="text-[11px] font-medium"
                   [class]="calculateDaysLeft(sub.billing_date) <= 3 ? 'text-red-500' : 'text-[#08B783]'">
                   {{ getDaysLeftText(calculateDaysLeft(sub.billing_date)) }}
@@ -65,6 +70,9 @@
                 <div class="text-[10px] text-gray-500 font-medium">
                   Next: {{ getNextBillingDate(sub.billing_date) }}
                 </div>
+                } @else {
+                <div class="text-[11px] font-medium text-blue-600">As needed</div>
+                }
                 @if (isExpiringSoon(sub.end_date)) {
                 <div class="text-[10px] text-orange-500 font-semibold">
                   Expiring Soon!
@@ -225,7 +233,7 @@
           placeholder="e.g., Premium Plan, Unlimited" />
       </div>
 
-      <!-- Amount -->
+      <!-- Billing Amount -->
       <div>
         <label class="text-sm font-medium">Billing Amount <span class="text-red-500">*</span></label>
         <div class="relative">
@@ -239,7 +247,16 @@
         }
       </div>
 
-      <!-- Billing Date -->
+      <!-- Mobile Recharge Checkbox -->
+      <div class="flex items-center gap-3 pt-2">
+        <input type="checkbox" formControlName="is_mobile_recharge" id="is_mobile_recharge" class="w-4 h-4 cursor-pointer" />
+        <label for="is_mobile_recharge" class="text-sm font-medium cursor-pointer">
+          Mobile Recharge?
+        </label>
+      </div>
+
+      <!-- Billing Date (Hidden for Mobile Recharge) -->
+      @if (!subscriptionForm.get('is_mobile_recharge')?.value) {
       <div>
         <label class="text-sm font-medium">Billing Date <span class="text-red-500">*</span></label>
         <input type="number" formControlName="billing_date"
@@ -250,7 +267,7 @@
         }
       </div>
 
-      <!-- Billing Cycle -->
+      <!-- Billing Cycle (Hidden for Mobile Recharge) -->
       <div>
         <label class="text-sm font-medium">Billing Cycle <span class="text-red-500">*</span></label>
         <select formControlName="billing_cycle" class="mt-1 w-full rounded-lg border px-3 py-2 outline-none text-gray-900">
@@ -260,11 +277,12 @@
         </select>
       </div>
 
-      <!-- Start Date -->
+      <!-- Start Date (Hidden for Mobile Recharge) -->
       <div>
         <label class="text-sm font-medium">Start Date <span class="text-red-500">*</span></label>
         <input type="date" formControlName="start_date" class="mt-1 w-full rounded-lg border px-3 py-2 outline-none" />
       </div>
+      }
 
       <!-- End Date -->
       <div>
