@@ -11,8 +11,6 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { SupabaseService } from '../../services/supabase.service';
-import { BudgetEntriesService, BudgetRecord } from '../../services/budget-entries.service';
-import { LoansService } from '../../services/loans/loans.service';
 import { CreditCardsService, CreditCard } from '../../services/credit-cards.service';
 import { SubscriptionsService, Subscription } from '../../services/subscriptions.service';
 import { GoldInvestmentsService, GoldInvestment } from '../../services/gold-investments.service';
@@ -20,6 +18,7 @@ import { StocksMutualFundsService, FundSummary } from '../../services/stocks-mut
 import { PostOfficeSchemesService, PostOfficeScheme } from '../../services/post-office-schemes.service';
 import { BarChartComponent } from '../../charts/bar-chart/bar-chart';
 import { DoughnutChartComponent } from '../../charts/doughnut-chart/doughnut-chart';
+import { AppDataStore } from '../../store/app-data.store';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -81,26 +80,22 @@ interface Loan {
 })
 export class Dashboard implements OnInit {
   supabaseService = inject(SupabaseService);
-  budgetEntriesService = inject(BudgetEntriesService);
-  loansService = inject(LoansService);
-  creditCardsService = inject(CreditCardsService);
   subscriptionsService = inject(SubscriptionsService);
-  goldInvestmentsService = inject(GoldInvestmentsService);
-  stocksMutualFundsService = inject(StocksMutualFundsService);
-  postOfficeSchemesService = inject(PostOfficeSchemesService);
+  appDataStore = inject(AppDataStore);
 
   userId = signal<string | null>(null);
   isLoading = signal(true);
   
-  // Data signals
-  budgetEntries = signal<BudgetRecord[]>([]);
+  // Derived signals from store
+  budgetEntries = computed(() => this.appDataStore.budgetEntries());
+  loans = computed(() => this.appDataStore.loans());
+  creditCards = computed(() => this.appDataStore.creditCards());
+  subscriptions = computed(() => this.appDataStore.subscriptions());
+  goldInvestments = computed(() => this.appDataStore.goldInvestments());
+  mutualFunds = computed(() => this.appDataStore.mutualFunds());
+  postOfficeSchemes = computed(() => this.appDataStore.postOfficeSchemes());
+
   monthlyBudgetData = signal<Map<string, { income: number; expenses: number; savings: number }>>(new Map());
-  loans = signal<Loan[]>([]);
-  creditCards = signal<CreditCard[]>([]);
-  subscriptions = signal<Subscription[]>([]);
-  goldInvestments = signal<GoldInvestment[]>([]);
-  mutualFunds = signal<FundSummary[]>([]);
-  postOfficeSchemes = signal<PostOfficeScheme[]>([]);
 
   // Last 5 months data
   last5Months = computed(() => {
@@ -416,13 +411,13 @@ export class Dashboard implements OnInit {
       const user = await this.supabaseService.getCurrentUser();
       if (user) {
         this.userId.set(user.id);
-        await this.loadAllData();
+        await this.loadAllData(user.id);
       }
     } catch (err) {
       console.error('Failed to get user:', err);
       const demoUserId = this.getOrCreateDemoUserId();
       this.userId.set(demoUserId);
-      await this.loadAllData();
+      await this.loadAllData(demoUserId);
     }
   }
 
@@ -438,25 +433,18 @@ export class Dashboard implements OnInit {
     return userId;
   }
 
-  async loadAllData() {
-    const userId = this.userId();
-    if (!userId) return;
-
+  async loadAllData(userId: string) {
     this.isLoading.set(true);
 
     try {
-      // Load last 5 months budget data
-      await this.loadLast5MonthsBudgetData(userId);
+      // Get last 5 months as array for the store
+      const monthYears = this.getLast5Months();
       
-      // Load all other data in parallel
-      await Promise.all([
-        this.loadLoansData(userId),
-        this.loadCreditCardsData(userId),
-        this.loadSubscriptionsData(userId),
-        this.loadGoldInvestmentsData(userId),
-        this.loadMutualFundsData(userId),
-        this.loadPostOfficeData(userId),
-      ]);
+      // Use the store to load all data at once
+      await this.appDataStore.loadAllData(userId, monthYears);
+      
+      // Load budget summary data
+      await this.loadLast5MonthsBudgetData(userId);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -464,122 +452,51 @@ export class Dashboard implements OnInit {
     }
   }
 
+  private getLast5Months(): string[] {
+    const today = new Date();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months: string[] = [];
+
+    for (let i = 4; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthName = monthNames[date.getMonth()];
+      const year = date.getFullYear();
+      months.push(`${monthName} ${year}`);
+    }
+
+    return months;
+  }
+
   async loadLast5MonthsBudgetData(userId: string) {
     try {
       const today = new Date();
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const budgetMap = new Map<string, { income: number; expenses: number; savings: number }>();
-      const allEntries: BudgetRecord[] = [];
 
-      // Load data for last 5 months
-      for (let i = 4; i >= 0; i--) {
-        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        const monthName = monthNames[date.getMonth()];
-        const year = date.getFullYear();
-        const monthYear = `${monthName} ${year}`;
-        const key = `${monthName}${year}`;
-
-        const entries = await this.budgetEntriesService.getBudgetEntriesByMonth(
-          monthYear,
-          userId
-        );
-
-        allEntries.push(...entries);
-
-        const income = entries
-          .filter((e) => e.type === 'income')
-          .reduce((sum, e) => sum + (e.amount || 0), 0);
-
-        const expenses = entries
-          .filter((e) => e.type === 'expense')
-          .reduce((sum, e) => sum + (e.amount || 0), 0);
-
-        budgetMap.set(key, {
-          income,
-          expenses,
-          savings: income - expenses,
-        });
-      }
+      // Process budget entries from store
+      const allEntries = this.budgetEntries();
+      
+      // Build the budget map from the entries
+      allEntries.forEach((entry) => {
+        const monthYear = entry.month_year;
+        const key = monthYear.split(' ').join('');
+        
+        const existing = budgetMap.get(key) || { income: 0, expenses: 0, savings: 0 };
+        
+        if (entry.type === 'income') {
+          existing.income += entry.amount || 0;
+        } else if (entry.type === 'expense') {
+          existing.expenses += entry.amount || 0;
+        }
+        
+        existing.savings = existing.income - existing.expenses;
+        budgetMap.set(key, existing);
+      });
 
       this.monthlyBudgetData.set(budgetMap);
-      this.budgetEntries.set(allEntries);
     } catch (error) {
-      console.error('Error loading last 5 months budget data:', error);
+      console.error('Error processing budget data:', error);
       this.monthlyBudgetData.set(new Map());
-      this.budgetEntries.set([]);
-    }
-  }
-
-  async loadBudgetData(monthYear: string, userId: string) {
-    try {
-      const entries = await this.budgetEntriesService.getBudgetEntriesByMonth(
-        monthYear,
-        userId
-      );
-      this.budgetEntries.set(entries);
-    } catch (error) {
-      console.error('Error loading budget data:', error);
-      this.budgetEntries.set([]);
-    }
-  }
-
-  async loadLoansData(userId: string) {
-    try {
-      const loans = await this.loansService.getLoansByUser(userId);
-      this.loans.set(loans as any);
-    } catch (error) {
-      console.error('Error loading loans data:', error);
-      this.loans.set([]);
-    }
-  }
-
-  async loadCreditCardsData(userId: string) {
-    try {
-      const cards = await this.creditCardsService.getCreditCards(userId);
-      this.creditCards.set(cards);
-    } catch (error) {
-      console.error('Error loading credit cards data:', error);
-      this.creditCards.set([]);
-    }
-  }
-
-  async loadSubscriptionsData(userId: string) {
-    try {
-      const subs = await this.subscriptionsService.getSubscriptions(userId);
-      this.subscriptions.set(subs);
-    } catch (error) {
-      console.error('Error loading subscriptions data:', error);
-      this.subscriptions.set([]);
-    }
-  }
-
-  async loadGoldInvestmentsData(userId: string) {
-    try {
-      const investments = await this.goldInvestmentsService.getGoldInvestments(userId);
-      this.goldInvestments.set(investments);
-    } catch (error) {
-      console.error('Error loading gold investments data:', error);
-      this.goldInvestments.set([]);
-    }
-  }
-
-  async loadMutualFundsData(userId: string) {
-    try {
-      const funds = await this.stocksMutualFundsService.getFundsSummary(userId);
-      this.mutualFunds.set(funds);
-    } catch (error) {
-      console.error('Error loading mutual funds data:', error);
-      this.mutualFunds.set([]);
-    }
-  }
-
-  async loadPostOfficeData(userId: string) {
-    try {
-      const schemes = await this.postOfficeSchemesService.getPostOfficeSchemes(userId);
-      this.postOfficeSchemes.set(schemes);
-    } catch (error) {
-      console.error('Error loading post office data:', error);
-      this.postOfficeSchemes.set([]);
     }
   }
 

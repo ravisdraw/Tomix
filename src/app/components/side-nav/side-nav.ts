@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, signal, OnInit, HostListener } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { User } from '@supabase/supabase-js';
+import { filter } from 'rxjs';
 
 interface NavItem {
   label: string;
@@ -88,6 +89,24 @@ export class SideNav implements OnInit {
         this.userAvatar.set(session.user.user_metadata?.['avatar_url'] || '');
       }
     });
+
+    // Set initial active nav item based on current route
+    this.updateActiveNavItem();
+
+    // Listen for route changes and update active nav item
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.updateActiveNavItem();
+      });
+  }
+
+  private updateActiveNavItem() {
+    const urlSegments = this.router.url.split('/').filter(segment => segment.length > 0);
+    if (urlSegments.length > 0) {
+      const currentPath = urlSegments[0];
+      this.selectedNavItem.set(currentPath);
+    }
   }
 
   navigateTo(path: string) {

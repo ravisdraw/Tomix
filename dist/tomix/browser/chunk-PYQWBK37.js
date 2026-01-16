@@ -1,0 +1,1 @@
+import{N as n,Ua as o,da as s}from"./chunk-5JVNEETK.js";var i=class t{static \u0275fac=function(e){return new(e||t)};static \u0275cmp=n({type:t,selectors:[["app-investments"]],decls:1,vars:0,template:function(e,p){e&1&&s(0,"router-outlet")},dependencies:[o],encapsulation:2})};export{i as Investments};

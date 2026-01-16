@@ -15,6 +15,7 @@ import { SupabaseService } from '../../../services/supabase.service';
 import { GoldInvestmentsService, GoldInvestment } from '../../../services/gold-investments.service';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { AppDataStore } from '../../../store/app-data.store';
 
 @Component({
   selector: 'app-gold-silver',
@@ -45,6 +46,7 @@ export class GoldSilver implements OnInit {
   monthStore = inject(MonthStore);
   supabaseService = inject(SupabaseService);
   goldInvestmentsService = inject(GoldInvestmentsService);
+  appDataStore = inject(AppDataStore);
 
   allPlans = computed(() => {
     const plans = this.investments();
@@ -108,16 +110,16 @@ export class GoldSilver implements OnInit {
     try {
       const user = await this.supabaseService.getCurrentUser();
       if (user) {
-        this.userId.set(user.id);
+        await this.loadInvestments(user.id);
       }
     } catch (err) {
       console.error('Failed to get user:', err);
       const demoUserId = this.getOrCreateDemoUserId();
       this.userId.set(demoUserId);
+      await this.loadInvestments(demoUserId);
     }
 
-    this.fetchGoldRates();
-    await this.loadInvestments();
+    await this.fetchGoldRates();
   }
 
   private getOrCreateDemoUserId(): string {
@@ -140,17 +142,25 @@ export class GoldSilver implements OnInit {
     // Rates are now managed per-plan through the currentRates signal
     // This method is kept for backward compatibility but does nothing
   }
-
-  async loadInvestments() {
+  private async loadInvestments(userId: string) {
     this.isCheckingData.set(true);
-    const userId = this.userId();
 
     if (!userId) return;
 
     try {
-      const allInvestments = await this.goldInvestmentsService.getGoldInvestments(userId);
-      this.investments.set(allInvestments);
-      
+      // Check if data already loaded in store for this user
+      if (this.appDataStore.goldInvestmentsLoaded() && this.appDataStore.currentUserId() === userId) {
+        // Use existing data from store
+        const allInvestments = this.appDataStore.goldInvestments();
+        this.investments.set(allInvestments);
+        console.log('Using cached gold investments data');
+      } else {
+        // Load from store (which will fetch from API if needed)
+        await this.appDataStore.loadGoldInvestments(userId);
+        const allInvestments = this.appDataStore.goldInvestments();
+        this.investments.set(allInvestments);
+      }
+
       // Load totals for each unique plan
       const uniquePlans = this.allPlans();
       await this.loadPlanTotals(uniquePlans);
@@ -168,6 +178,7 @@ export class GoldSilver implements OnInit {
       if (!plan.plan_id) continue;
       
       try {
+        this.userId.set(plan.user_id!);
         const history = await this.goldInvestmentsService.getInvestmentHistory(
           this.userId()!,
           plan.plan_id
@@ -315,7 +326,9 @@ export class GoldSilver implements OnInit {
         alert('Investment plan created successfully!');
       }
 
-      await this.loadInvestments();
+      if (userId) {
+        await this.loadInvestments(userId);
+      }
       this.closeAddPlan();
     } catch (error) {
       console.error('Error submitting investment:', error);
@@ -387,13 +400,15 @@ export class GoldSilver implements OnInit {
     });
     this.showAddPlan.set(true);
   }
-
   async deletePlan(planId: string) {
     // if (!confirm('Are you sure you want to delete this investment?')) return;
 
     try {
+      const userId = this.userId();
       await this.goldInvestmentsService.deleteGoldInvestment(planId);
-      await this.loadInvestments();
+      if (userId) {
+        await this.loadInvestments(userId);
+      }
       // alert('Investment deleted successfully!');
     } catch (error) {
       console.error('Error deleting investment:', error);
@@ -414,10 +429,9 @@ export class GoldSilver implements OnInit {
       if (currentPlanId && userId) {
         const history = await this.goldInvestmentsService.getInvestmentHistory(userId, currentPlanId);
         this.planHistory.set(history);
+        // Reload all investments to update totals
+        await this.loadInvestments(userId);
       }
-      
-      // Reload all investments to update totals
-      await this.loadInvestments();
     } catch (error) {
       console.error('Error deleting investment entry:', error);
       alert('Failed to delete investment entry. Please try again.');

@@ -14,6 +14,7 @@ import { SubscriptionsService, Subscription } from '../../services/subscriptions
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { EmojiPicker } from '../../shared/emoji-picker/emoji-picker';
+import { AppDataStore } from '../../store/app-data.store';
 
 @Component({
   selector: 'app-subscriptions',
@@ -34,6 +35,7 @@ export class Subscriptions implements OnInit {
 
   supabaseService = inject(SupabaseService);
   subscriptionsService = inject(SubscriptionsService);
+  appDataStore = inject(AppDataStore);
 
   // Billing cycle options
   billingCycles = ['monthly', 'quarterly', 'yearly'];
@@ -106,14 +108,14 @@ export class Subscriptions implements OnInit {
       const user = await this.supabaseService.getCurrentUser();
       if (user) {
         this.userId.set(user.id);
-        await this.loadSubscriptions();
+        await this.loadSubscriptions(user.id);
       }
     } catch (err) {
       console.error('Failed to get user:', err);
       // For demo purposes, use a default UUID
       const demoUserId = this.getOrCreateDemoUserId();
       this.userId.set(demoUserId);
-      await this.loadSubscriptions();
+      await this.loadSubscriptions(demoUserId);
     }
   }
 
@@ -133,14 +135,21 @@ export class Subscriptions implements OnInit {
     return userId;
   }
 
-  async loadSubscriptions() {
-    const userId = this.userId();
-    if (!userId) return;
-
+  private async loadSubscriptions(userId: string) {
     this.isLoading.set(true);
     try {
-      const subs = await this.subscriptionsService.getSubscriptions(userId);
-      this.subscriptions.set(subs);
+      // Check if data already loaded in store for this user
+      if (this.appDataStore.subscriptionsLoaded() && this.appDataStore.currentUserId() === userId) {
+        // Use existing data from store
+        const subs = this.appDataStore.subscriptions();
+        this.subscriptions.set(subs);
+        console.log('Using cached subscriptions data');
+      } else {
+        // Load from store (which will fetch from API if needed)
+        await this.appDataStore.loadSubscriptions(userId);
+        const subs = this.appDataStore.subscriptions();
+        this.subscriptions.set(subs);
+      }
     } catch (error) {
       console.error('Error loading subscriptions:', error);
     } finally {
@@ -233,7 +242,9 @@ export class Subscriptions implements OnInit {
         await this.subscriptionsService.createSubscription(subscriptionData);
       }
 
-      await this.loadSubscriptions();
+      if (userId) {
+        await this.loadSubscriptions(userId);
+      }
       this.closeAddSubscription();
       this.resetForm();
     } catch (error) {
@@ -266,8 +277,11 @@ export class Subscriptions implements OnInit {
     }
 
     try {
+      const userId = this.userId();
       await this.subscriptionsService.deleteSubscription(id);
-      await this.loadSubscriptions();
+      if (userId) {
+        await this.loadSubscriptions(userId);
+      }
       this.selectedSubscriptionId.set(null);
     } catch (error) {
       console.error('Error deleting subscription:', error);

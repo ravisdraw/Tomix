@@ -10,12 +10,12 @@ import {
 } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { LoansStore } from '../../store/loans.store';
 import { SupabaseService } from '../../services/supabase.service';
 import { LoansService } from '../../services/loans/loans.service';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { EmojiPicker } from '../../shared/emoji-picker/emoji-picker';
+import { AppDataStore } from '../../store/app-data.store';
 
 interface Loan {
   id: string | number;
@@ -57,7 +57,6 @@ interface EMIScheduleRow {
   templateUrl: './loans.html',
   styleUrl: './loans.css',
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
-  providers: [LoansStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Loans implements OnInit {
@@ -81,13 +80,13 @@ export class Loans implements OnInit {
   selectedLoanForSchedule = signal<Loan | null>(null);
   emiSchedule = signal<EMIScheduleRow[]>([]);
 
-  loansStore = inject(LoansStore);
+  appDataStore = inject(AppDataStore);
   supabaseService = inject(SupabaseService);
   loansService = inject(LoansService);
 
-  // Computed property for loan items
+  // Computed property for loan items from store
   loanItems = computed(() => {
-    return this.loansStore.loans() as Loan[];
+    return this.appDataStore.loans() as Loan[];
   });
 
   // Sorted loan items based on selected sort field
@@ -193,14 +192,14 @@ export class Loans implements OnInit {
       const user = await this.supabaseService.getCurrentUser();
       if (user) {
         this.userId.set(user.id);
-        this.loadLoans(user.id);
+        await this.loadLoans(user.id);
       }
     } catch (err) {
       console.error('Failed to get user:', err);
       // For demo purposes, use a default UUID
       const demoUserId = this.getOrCreateDemoUserId();
       this.userId.set(demoUserId);
-      this.loadLoans(demoUserId);
+      await this.loadLoans(demoUserId);
     }
   }
 
@@ -224,7 +223,14 @@ export class Loans implements OnInit {
   private async loadLoans(userId: string) {
     this.isCheckingData.set(true);
     try {
-      await this.loansStore.loadLoansByUser(userId);
+      // Check if data already loaded in store for this user
+      if (this.appDataStore.loansLoaded() && this.appDataStore.currentUserId() === userId) {
+        // Use existing data from store
+        console.log('Using cached loans data');
+      } else {
+        // Load from store (which will fetch from API if needed)
+        await this.appDataStore.loadLoans(userId);
+      }
     } catch (error) {
       console.error('Error loading loans:', error);
     } finally {
@@ -301,13 +307,15 @@ export class Loans implements OnInit {
 
       if (editingId) {
         // Update existing loan
-        await this.loansStore.updateLoan(editingId as string, formValue);
+        await this.loansService.updateLoan(editingId as string, formValue);
       } else {
         // Save new loan
-        await this.loansStore.saveLoan(formValue, userId);
+        await this.loansService.saveLoan(formValue);
       }
 
       this.closeLoanForm();
+      // Reload from store
+      await this.appDataStore.loadLoans(userId);
       await this.loadLoans(userId);
     } catch (error) {
       console.error('Error saving loan:', error);
@@ -317,12 +325,13 @@ export class Loans implements OnInit {
   async deleteLoan(loanId: string | number) {
     if (confirm('Are you sure you want to delete this loan?')) {
       try {
-        await this.loansStore.deleteLoan(loanId as string);
+        await this.loansService.deleteLoan(loanId as string);
         const userId = this.userId();
         if (userId) {
+          // Reload from store
+          await this.appDataStore.loadLoans(userId);
           await this.loadLoans(userId);
         }
-        this.selectedLoanId.set(null);
       } catch (error) {
         console.error('Error deleting loan:', error);
       }

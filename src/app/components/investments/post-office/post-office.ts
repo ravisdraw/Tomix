@@ -14,6 +14,7 @@ import { SupabaseService } from '../../../services/supabase.service';
 import { PostOfficeSchemesService, PostOfficeScheme } from '../../../services/post-office-schemes.service';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { AppDataStore } from '../../../store/app-data.store';
 
 interface MaturityDetail {
   month: number;
@@ -49,6 +50,7 @@ export class PostOffice implements OnInit {
 
   supabaseService = inject(SupabaseService);
   postOfficeSchemesService = inject(PostOfficeSchemesService);
+  appDataStore = inject(AppDataStore);
 
   allSchemes = computed(() => {
     const schemesList = this.schemes();
@@ -103,15 +105,14 @@ export class PostOffice implements OnInit {
     try {
       const user = await this.supabaseService.getCurrentUser();
       if (user) {
-        this.userId.set(user.id);
+        await this.loadSchemes(user.id);
       }
     } catch (err) {
       console.error('Failed to get user:', err);
       const demoUserId = this.getOrCreateDemoUserId();
       this.userId.set(demoUserId);
+      await this.loadSchemes(demoUserId);
     }
-
-    await this.loadSchemes();
   }
 
   private getOrCreateDemoUserId(): string {
@@ -129,17 +130,25 @@ export class PostOffice implements OnInit {
 
     return userId;
   }
-
-  async loadSchemes() {
+private async loadSchemes(userId: string) {
     this.isCheckingData.set(true);
-    const userId = this.userId();
 
     if (!userId) return;
 
     try {
-      const allSchemes = await this.postOfficeSchemesService.getPostOfficeSchemes(userId);
-      this.schemes.set(allSchemes);
-      
+      // Check if data already loaded in store for this user
+      if (this.appDataStore.postOfficeSchemesLoaded() && this.appDataStore.currentUserId() === userId) {
+        // Use existing data from store
+        const allSchemes = this.appDataStore.postOfficeSchemes();
+        this.schemes.set(allSchemes);
+        console.log('Using cached post office schemes data');
+      } else {
+        // Load from store (which will fetch from API if needed)
+        await this.appDataStore.loadPostOfficeSchemes(userId);
+        const allSchemes = this.appDataStore.postOfficeSchemes();
+        this.schemes.set(allSchemes);
+      }
+
       // Load totals for each unique scheme
       const uniqueSchemes = this.allSchemes();
       await this.loadSchemeTotals(uniqueSchemes);
@@ -340,7 +349,9 @@ export class PostOffice implements OnInit {
         alert('Scheme created successfully!');
       }
 
-      await this.loadSchemes();
+      if (userId) {
+        await this.loadSchemes(userId);
+      }
       this.closeAddScheme();
     } catch (error) {
       console.error('Error submitting scheme:', error);
@@ -381,8 +392,11 @@ export class PostOffice implements OnInit {
     if (!confirm('Are you sure you want to delete this scheme?')) return;
 
     try {
+      const userId = this.userId();
       await this.postOfficeSchemesService.deletePostOfficeScheme(schemeId);
-      await this.loadSchemes();
+      if (userId) {
+        await this.loadSchemes(userId);
+      }
       alert('Scheme deleted successfully!');
     } catch (error) {
       console.error('Error deleting scheme:', error);
@@ -403,10 +417,9 @@ export class PostOffice implements OnInit {
       if (currentSchemeId && userId) {
         const history = await this.postOfficeSchemesService.getSchemeHistory(userId, currentSchemeId);
         this.schemeHistory.set(history);
+        // Reload all schemes to update totals
+        await this.loadSchemes(userId);
       }
-      
-      // Reload all schemes to update totals
-      await this.loadSchemes();
     } catch (error) {
       console.error('Error deleting scheme entry:', error);
       alert('Failed to delete scheme entry. Please try again.');

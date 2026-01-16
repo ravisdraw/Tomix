@@ -20,6 +20,7 @@ import { ExpenseCategoriesService } from '../../services/expense-categories.serv
 import { BankAccountsService } from '../../services/bank-accounts.service';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { AppDataStore } from '../../store/app-data.store';
 import { BarChartComponent } from '../../charts/bar-chart/bar-chart';
 import {
   Chart as ChartJS,
@@ -160,6 +161,7 @@ export class Budget implements OnInit {
   budgetEntriesService = inject(BudgetEntriesService);
   expenseCategoriesService = inject(ExpenseCategoriesService);
   bankAccountsService = inject(BankAccountsService);
+  appDataStore = inject(AppDataStore);
   userId = signal<string | null>(null);
 
   // Category options
@@ -268,6 +270,13 @@ export class Budget implements OnInit {
         this.userId.set(user.id);
         this.loadExpenseCategories(user.id);
         this.loadBankAccounts(user.id);
+        
+        // Try to load from the app data store (which was loaded in dashboard)
+        if (!this.appDataStore.budgetLoaded() || this.appDataStore.currentUserId() !== user.id) {
+          // Only load if not already loaded
+          const monthYears = this.getLast5Months();
+          await this.appDataStore.loadBudgetEntries(user.id, monthYears);
+        }
         // Effect will automatically load data when userId is set
       }
     } catch (err) {
@@ -277,8 +286,29 @@ export class Budget implements OnInit {
       this.userId.set(demoUserId);
       this.loadExpenseCategories(demoUserId);
       this.loadBankAccounts(demoUserId);
+      
+      // Try to load from the app data store
+      if (!this.appDataStore.budgetLoaded() || this.appDataStore.currentUserId() !== demoUserId) {
+        const monthYears = this.getLast5Months();
+        await this.appDataStore.loadBudgetEntries(demoUserId, monthYears);
+      }
       // Effect will automatically load data when userId is set
     }
+  }
+
+  private getLast5Months(): string[] {
+    const today = new Date();
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months: string[] = [];
+
+    for (let i = 4; i >= 0; i--) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthName = monthNames[date.getMonth()];
+      const year = date.getFullYear();
+      months.push(`${monthName} ${year}`);
+    }
+
+    return months;
   }
 
   private getOrCreateDemoUserId(): string {
@@ -479,34 +509,6 @@ export class Budget implements OnInit {
       this.doughnutData.set([]);
       this.doughnutColors.set([]);
     }
-  }
-
-  private getLast5Months(): string[] {
-    const months: string[] = [];
-    const monthNames = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    const today = new Date();
-
-    for (let i = 4; i >= 0; i--) {
-      const date = new Date(today.getFullYear(), today.getMonth() - i + 1, 1);
-      const month = monthNames[date.getMonth()];
-      const year = date.getFullYear();
-      months.push(`${month} ${year}`);
-    }
-
-    return months;
   }
 
   private async loadExpenseCategories(userId: string) {

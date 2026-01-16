@@ -17,6 +17,7 @@ import {
 } from '../../../services/stocks-mutual-funds.service';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
+import { AppDataStore } from '../../../store/app-data.store';
 
 @Component({
   selector: 'app-mutual-funds',
@@ -43,6 +44,7 @@ export class MutualFunds implements OnInit {
 
   supabaseService = inject(SupabaseService);
   stocksMutualFundsService = inject(StocksMutualFundsService);
+  appDataStore = inject(AppDataStore);
 
   investmentStats = computed(() => {
     const summary = this.fundsSummary();
@@ -98,14 +100,14 @@ export class MutualFunds implements OnInit {
       const user = await this.supabaseService.getCurrentUser();
       if (user) {
         this.userId.set(user.id);
+        await this.loadFundsSummary(user.id);
       }
     } catch (err) {
       console.error('Failed to get user:', err);
       const demoUserId = this.getOrCreateDemoUserId();
       this.userId.set(demoUserId);
+      await this.loadFundsSummary(demoUserId);
     }
-
-    await this.loadFundsSummary();
   }
 
   private getOrCreateDemoUserId(): string {
@@ -124,16 +126,26 @@ export class MutualFunds implements OnInit {
     return userId;
   }
 
-  async loadFundsSummary() {
+  private async loadFundsSummary(userId: string) {
     this.isCheckingData.set(true);
-    const userId = this.userId();
 
     if (!userId) return;
 
     try {
-      const summary = await this.stocksMutualFundsService.getFundsSummary(userId);
-      this.fundsSummary.set(summary);
-      this.availableFunds.set(summary);
+      // Check if data already loaded in store for this user
+      if (this.appDataStore.mutualFundsLoaded() && this.appDataStore.currentUserId() === userId) {
+        // Use existing data from store
+        const summary = this.appDataStore.mutualFunds();
+        this.fundsSummary.set(summary);
+        this.availableFunds.set(summary);
+        console.log('Using cached mutual funds data');
+      } else {
+        // Load from store (which will fetch from API if needed)
+        await this.appDataStore.loadMutualFunds(userId);
+        const summary = this.appDataStore.mutualFunds();
+        this.fundsSummary.set(summary);
+        this.availableFunds.set(summary);
+      }
     } catch (error) {
       console.error('Error loading funds summary:', error);
     } finally {
@@ -236,7 +248,9 @@ export class MutualFunds implements OnInit {
         await this.stocksMutualFundsService.addInvestment(investment);
       }
 
-      await this.loadFundsSummary();
+      if (userId) {
+        await this.loadFundsSummary(userId);
+      }
       
       // Reload transactions if viewing a fund's transactions
       if (this.showTransactionsForFund()) {
@@ -287,7 +301,7 @@ export class MutualFunds implements OnInit {
 
     try {
       await this.stocksMutualFundsService.updateFundCurrentPrice(userId, fund.fund_id, price);
-      await this.loadFundsSummary();
+      await this.loadFundsSummary(userId);
       
       if (this.showTransactionsForFund() === fund.fund_id) {
         await this.loadFundTransactions(fund.fund_id);
@@ -302,8 +316,11 @@ export class MutualFunds implements OnInit {
     if (!confirm('Are you sure you want to delete this transaction?')) return;
 
     try {
+      const userId = this.userId();
       await this.stocksMutualFundsService.deleteInvestment(transactionId);
-      await this.loadFundsSummary();
+      if (userId) {
+        await this.loadFundsSummary(userId);
+      }
       
       if (this.showTransactionsForFund()) {
         await this.loadFundTransactions(this.showTransactionsForFund()!);
@@ -328,7 +345,7 @@ export class MutualFunds implements OnInit {
         this.selectedFundTransactions.set([]);
       }
       
-      await this.loadFundsSummary();
+      await this.loadFundsSummary(userId);
     } catch (error) {
       console.error('Error deleting fund:', error);
       alert('Failed to delete fund. Please try again.');

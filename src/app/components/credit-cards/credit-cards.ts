@@ -15,6 +15,7 @@ import { SupabaseService } from '../../services/supabase.service';
 import { CreditCardsService, CreditCard } from '../../services/credit-cards.service';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { AppDataStore } from '../../store/app-data.store';
 
 @Component({
   selector: 'app-credit-cards',
@@ -45,6 +46,7 @@ export class CreditCards implements OnInit {
   monthStore = inject(MonthStore);
   supabaseService = inject(SupabaseService);
   creditCardsService = inject(CreditCardsService);
+  appDataStore = inject(AppDataStore);
 
   // Computed property for current month key
   currentMonthKey = computed(() => {
@@ -118,13 +120,17 @@ export class CreditCards implements OnInit {
 
       if (!prev) {
         this.previousMonth.set(currentMonth);
-        this.loadCreditCards();
+        if (userId) {
+          this.loadCreditCards(userId);
+        }
         return;
       }
 
       if (currentMonth !== prev) {
         this.previousMonth.set(currentMonth);
-        this.loadCreditCards();
+        if (userId) {
+          this.loadCreditCards(userId);
+        }
       }
     });
   }
@@ -133,12 +139,13 @@ export class CreditCards implements OnInit {
     try {
       const user = await this.supabaseService.getCurrentUser();
       if (user) {
-        this.userId.set(user.id);
+        await this.loadCreditCards(user.id);
       }
     } catch (err) {
       console.error('Failed to get user:', err);
       const demoUserId = this.getOrCreateDemoUserId();
       this.userId.set(demoUserId);
+      await this.loadCreditCards(demoUserId);
     }
   }
 
@@ -158,14 +165,23 @@ export class CreditCards implements OnInit {
     return userId;
   }
 
-  async loadCreditCards() {
-    const userId = this.userId();
-    if (!userId) return;
-
+  private async loadCreditCards(userId: string) {
     this.isCheckingData.set(true);
     try {
-      const allCards = await this.creditCardsService.getCreditCards(userId);
-      this.creditCards.set(allCards);
+      let allCards: CreditCard[] = [];
+
+      // Check if data already loaded in store for this user
+      if (this.appDataStore.creditCardsLoaded() && this.appDataStore.currentUserId() === userId) {
+        // Use existing data from store
+        allCards = this.appDataStore.creditCards();
+        this.creditCards.set(allCards);
+        console.log('Using cached credit cards data');
+      } else {
+        // Load from store (which will fetch from API if needed)
+        await this.appDataStore.loadCreditCards(userId);
+        allCards = this.appDataStore.creditCards();
+        this.creditCards.set(allCards);
+      }
 
       // Load unique existing cards (excluding month-specific duplicates)
       const uniqueCards = this.getUniqueCards(allCards);
@@ -338,8 +354,11 @@ export class CreditCards implements OnInit {
   async deleteCardTemplate(cardId: string) {
     if (confirm('This will delete the card template. Are you sure?')) {
       try {
+        const userId = this.userId();
         await this.creditCardsService.deleteCreditCard(cardId);
-        await this.loadCreditCards();
+        if (userId) {
+          await this.loadCreditCards(userId);
+        }
         this.resetForm();
         this.selectedExistingCard.set(null);
         this.cardAction.set('');
@@ -371,6 +390,7 @@ export class CreditCards implements OnInit {
       : form.due_amount;
 
     try {
+      const userId = this.userId();
       await this.creditCardsService.updateCreditCard(card.id!, {
         card_name: form.card_name,
         last_four_digits: form.last_four_digits,
@@ -381,7 +401,9 @@ export class CreditCards implements OnInit {
         due_amount: dueAmount,
       });
 
-      await this.loadCreditCards();
+      if (userId) {
+        await this.loadCreditCards(userId);
+      }
       this.resetForm();
       this.selectedExistingCard.set(null);
       this.cardAction.set('');
@@ -475,7 +497,9 @@ export class CreditCards implements OnInit {
         });
       }
 
-      await this.loadCreditCards();
+      if (userId) {
+        await this.loadCreditCards(userId);
+      }
       this.resetForm();
       this.closeAddCard();
     } catch (error) {
@@ -487,8 +511,11 @@ export class CreditCards implements OnInit {
   async deleteCard(cardId: string) {
     if (confirm('Are you sure you want to delete this credit card?')) {
       try {
+        const userId = this.userId();
         await this.creditCardsService.deleteCreditCard(cardId);
-        await this.loadCreditCards();
+        if (userId) {
+          await this.loadCreditCards(userId);
+        }
       } catch (error) {
         console.error('Error deleting credit card:', error);
         alert('Failed to delete credit card. Please try again.');

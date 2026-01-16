@@ -1,0 +1,1 @@
+import{c as e,d as o,e as r,f as a}from"./chunk-ODYORDEL.js";function i(){let t=new Date,h=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][t.getMonth()],s=t.getFullYear();return`${h} ${s}`}var c={month:i()},g=o({providedIn:"root"},a(c),r(t=>({setMonth(n){e(t,{month:n})}})));export{g as a};
