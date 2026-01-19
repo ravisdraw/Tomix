@@ -71,9 +71,16 @@
                   Next: {{ getNextBillingDate(sub.billing_date) }}
                 </div>
                 } @else {
-                <div class="text-[11px] font-medium text-blue-600">As needed</div>
+                <div class="text-[11px] font-medium text-blue-600">{{ getDaysLeftText(calculateMobileRecharDaysLeft(sub.end_date)) }}</div>
+                <div class="text-[10px] text-gray-500 font-medium">
+                  Expires: {{ sub.end_date ? (sub.end_date | date: 'MMM d, yyyy') : 'N/A' }}
+                </div>
                 }
-                @if (isExpiringSoon(sub.end_date)) {
+                @if (isMobileRecharge(sub) && isLastDay(sub.end_date)) {
+                <div class="text-[10px] text-orange-500 font-semibold">
+                  Last day!
+                </div>
+                } @else if (!isMobileRecharge(sub) && isExpiringSoon(sub.end_date)) {
                 <div class="text-[10px] text-orange-500 font-semibold">
                   Expiring Soon!
                 </div>

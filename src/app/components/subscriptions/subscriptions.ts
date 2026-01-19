@@ -302,7 +302,7 @@ export class Subscriptions implements OnInit {
   getDaysLeftText(daysLeft: number): string {
     if (daysLeft === 0) return 'Today';
     if (daysLeft === 1) return 'Tomorrow';
-    return `${daysLeft} days`;
+    return `${daysLeft} days left`;
   }
 
   getBillingCycleText(cycle: string): string {
@@ -363,7 +363,29 @@ export class Subscriptions implements OnInit {
     return diffDays >= 0 && diffDays <= 30; // Expiring within 30 days
   }
 
+  calculateMobileRecharDaysLeft(endDate?: string): number {
+    if (!endDate) return 0;
+
+    const today = new Date();
+    const end = new Date(endDate);
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return Math.max(diffDays, 0);
+  }
+
   isMobileRecharge(subscription: Subscription): boolean {
     return (subscription as any).is_mobile_recharge || false;
+  }
+
+  isLastDay(endDate?: string): boolean {
+    if (!endDate) return false;
+
+    const today = new Date();
+    const end = new Date(endDate);
+    const diffTime = end.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    return diffDays === 0; // Last day
   }
 }
